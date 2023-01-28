@@ -1,0 +1,25 @@
+png 120 120 mp1circle.png
+
+rgb 0 0 0
+xyzw 0 0 0 1
+circle 15 -1
+
+rgb 255 187 0
+xyzw 0 0 0 1
+circle 14.2 -1
+
+rgb 255 255 0
+xyzw -1 -0.987 0 1
+circle 50 -1
+
+rgb 187 255 0
+xyzw 0.51 0.51 0 1
+circle 55 -1
+
+rgb 0 187 0
+xyzw -0.9 0.8 0 1
+xyzw -0.8 0.6 0 1
+xyzw -0.6 0.1 0 1
+circle 20 -1
+circle 2.5 -2
+circle 10 -3
