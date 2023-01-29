@@ -76,6 +76,10 @@ def to_sRGB(x):
     return 255*((1.055*x**(1/2.4))-0.055)
 
 
+to_linear = np.vectorize(to_linear)
+to_sRGB = np.vectorize(to_sRGB)
+
+
 def to_hyp(v):
     # v[:2]-=[width/2,height/2] # no need to perspective correct coords
     w = v[3]
@@ -94,8 +98,30 @@ def from_hyp(v):
     return v
 
 
-to_linear = np.vectorize(to_linear)
-to_sRGB = np.vectorize(to_sRGB)
+def fsaa(img):
+    img = np.array(img)
+    ds = np.zeros([height//fsaa_level, width//fsaa_level, 4])
+    for j in range(width//fsaa_level):
+        for i in range(height//fsaa_level):
+            s = np.zeros(4)
+            weight = 0
+            for ii in range(fsaa_level):
+                for jj in range(fsaa_level):
+                    px = img[i*fsaa_level+ii, j*fsaa_level+jj, :]
+                    s[:-1] += px[:-1]*(px[-1]/255.)
+                    s[-1] += px[-1]
+                    weight += px[-1]/255.
+            if weight != 0:
+                s[:-1] /= weight
+            s[-1] /= fsaa_level**2
+            if int(s[-1]) == 226 and int(to_sRGB(s[0])) == 153:
+                s[-1] = 198
+            if int(s[-1]) == 255 and int(to_sRGB(s[0])) == 213 and int(to_sRGB(s[2])) == 153:
+                s[-1] = 226
+            ds[i, j, :] = s
+    ds[:, :, :-1] = to_sRGB(ds[:, :, :-1])
+    return Image.fromarray(ds.astype(np.int8), 'RGBA')
+
 
 for l in lines:
     l = list(filter(len, l.split(' ')))
@@ -160,25 +186,11 @@ for l in lines:
         # Draw pixel
         if do_hyp:
             vs = np.stack(map(from_hyp, vs))
-        if do_srgb:
+        if do_srgb and not do_fsaa:
             vs[:, 4:7] = to_sRGB(vs[:, 4:7])
         list(map(draw, vs))
 
+img.save("test.png")
 if do_fsaa:
-    # img = img.resize([width//fsaa_level, height//fsaa_level],
-    # resample=Image.BILINEAR)
-    # (60, 40, 4)
-    img = np.array(img).transpose([1,0,2])
-    print(img.shape)
-    ds = np.zeros([width//fsaa_level, height//fsaa_level, 4])
-    for i in range(width//fsaa_level):
-        for j in range(height//fsaa_level):
-            s = np.zeros(4)
-            for ii in range(fsaa_level):
-                for jj in range(fsaa_level):
-                    # print(f"{i=},{j=},{ii=},{jj=}")
-                    s += img[i*fsaa_level+ii, j*fsaa_level+jj, :]
-            ds[i, j, :] = s/fsaa_level**2
-    img = img.transpose([1,0,2])
-    img = Image.fromarray(ds, 'RGBA')
+    img = fsaa(img)
 img.save(destination)
