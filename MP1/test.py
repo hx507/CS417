@@ -7,6 +7,7 @@ ref_dir = "reference_files/"
 
 err = []
 for f in lines:
+    print(f)
     name = f.split(".")[0]
     system(f"make run file=./{ref_dir}/{name}.txt")
     system(f"mv ./{name}.png ./test")
@@ -26,6 +27,8 @@ for f in lines:
     system(f"convert {rawdiff_file} -level 0%,8% {diff_file}")
     system(
         f"convert +append {ref_file} {gen_file} {ae_file} {rawdiff_file} {diff_file} {look_file}")
+
+    print("===================================================")
 
 
 print("Errors:\n", err)

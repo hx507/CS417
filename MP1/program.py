@@ -9,8 +9,9 @@ np.set_printoptions(precision=2, suppress=True, threshold=90)
 lines = open(sys.argv[1], 'r').readlines()
 lines = map(lambda x: x.strip().replace('\t', ' '), lines)
 lines = filter(lambda x: x.startswith(
-    ('xyzw', 'png', 'rgb', 'tri', 'depth')), lines)
+    ('xyzw', 'png', 'rgb', 'tri', 'depth', 'sRGB')), lines)
 do_depth = False
+do_srgb = False
 
 verticies = []
 curr_color = [255, 255, 255, 255]
@@ -35,7 +36,7 @@ def dda(a, b, d):
     points = []
     while p[d] < b[d]:
         # if p[d] == b[d]:
-            # points.append(p.copy())
+        # points.append(p.copy())
         points.append(p.copy())
         p += s
     return points
@@ -57,6 +58,23 @@ def draw(p):
         img.putpixel(pixel, color)
 
 
+def to_linear(x):
+    x /= 255.
+    if x <= 0.04045:
+        return 255*(x/12.92)
+    return 255*(((x+0.055)/1.055)**2.4)
+
+
+def to_sRGB(x):
+    x /= 255.
+    if x <= 0.0031308:
+        return 255*(x*12.92)
+    return 255*((1.055*x**(1/2.4))-0.055)
+
+
+to_linear = np.vectorize(to_linear)
+to_sRGB = np.vectorize(to_sRGB)
+
 for l in lines:
     l = list(filter(len, l.split(' ')))
     print(l)
@@ -68,6 +86,8 @@ for l in lines:
     elif l[0] == 'depth':
         depth_buffer = np.ones([width, height])
         do_depth = True
+    elif l[0] == 'sRGB':
+        do_srgb = True
 
     elif l[0] == 'rgb':
         curr_color = list(map(int, l[1:]))+[255]
@@ -80,6 +100,10 @@ for l in lines:
         # Select vertices for tri
         vs = np.array(verticies)[list(
             map(lambda x: int(x)-1 if int(x) > 0 else int(x), l[1:]))]
+
+        # sRGB transform
+        if do_srgb:
+            vs[:, 4:7] = to_linear(vs[:, 4:7])
 
         # Do viewport transform
         vs = np.stack(map(viewport_transform, vs))
@@ -100,24 +124,9 @@ for l in lines:
         # print("pixels", vs)
 
         # Draw pixel
+        if do_srgb:
+            vs[:, 4:7] = to_sRGB(vs[:, 4:7])
         list(map(draw, vs))
-
-        # mx = min(vs, key = lambda x:x[0])
-        # my = min(vs, key = lambda x:x[1])
-        # print(f"{mx=},{my=}")
-        # mx[:2]-=10
-        # my[:2]-=10
-        # my[:2]=[10,10]
-        # draw(mx)
-        # draw(my)
-        # data = np.array([[24., 12., 1., 1., 255., 0., 0., 255.],
-                         # [6., 42.,  1., 1., 255., 0.,  0., 255.]])
-        # print(f"{data=}")
-        # line1 = dda(*data, 1)
-        # print("DDAed\n", np.array(line1))
-        # line2 = dda(line1[-1],line1[-1], 0)
-        # print("DDAed\n", np.array(line2))
-        # break
 
     print('--------------')
 
