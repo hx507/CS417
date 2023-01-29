@@ -9,7 +9,7 @@ np.set_printoptions(precision=2, suppress=True, threshold=90)
 lines = open(sys.argv[1], 'r').readlines()
 lines = map(lambda x: x.strip().replace('\t', ' '), lines)
 lines = filter(lambda x: x.startswith(
-    ('xyzw', 'png', 'rgb', 'tri', 'depth', 'sRGB', 'hyp', 'fsaa')), lines)
+    ('xyzw', 'png', 'rgb', 'tri', 'depth', 'sRGB', 'hyp', 'fsaa', 'line')), lines)
 do_depth = False
 do_srgb = False
 do_hyp = False
@@ -153,6 +153,20 @@ for l in lines:
         v = list(map(float, l[1:]))
         verticies += [v + curr_color]
 
+    elif l[0] == 'line':
+        vs = np.array(verticies)[list(
+            map(lambda x: int(x)-1 if int(x) > 0 else int(x), l[1:]))]
+
+        # Do viewport transform
+        vs = np.stack(map(viewport_transform, vs))
+        print("view port transformed:\n", vs)
+
+        diff = np.abs(vs[0]-vs[1])
+        dda_axis = int(diff[0] < diff[1])
+        vs = dda(*vs, dda_axis)
+
+        list(map(draw, vs))
+
     elif l[0] == 'tri':
         # Select vertices for tri
         vs = np.array(verticies)[list(
@@ -190,7 +204,6 @@ for l in lines:
             vs[:, 4:7] = to_sRGB(vs[:, 4:7])
         list(map(draw, vs))
 
-img.save("test.png")
 if do_fsaa:
     img = fsaa(img)
 img.save(destination)
