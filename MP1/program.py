@@ -9,9 +9,10 @@ np.set_printoptions(precision=2, suppress=True, threshold=90)
 lines = open(sys.argv[1], 'r').readlines()
 lines = map(lambda x: x.strip().replace('\t', ' '), lines)
 lines = filter(lambda x: x.startswith(
-    ('xyzw', 'png', 'rgb', 'tri', 'depth', 'sRGB')), lines)
+    ('xyzw', 'png', 'rgb', 'tri', 'depth', 'sRGB', 'hyp')), lines)
 do_depth = False
 do_srgb = False
+do_hyp = False
 
 verticies = []
 curr_color = [255, 255, 255, 255]
@@ -46,14 +47,16 @@ def draw(p):
     do_draw = True
     pixel, color = tuple(map(round, p[:2])), tuple(map(round, p[4:]))
     depth = p[2]/p[3]
+    if not (0 <= pixel[0] < width and 0 <= pixel[1] < height):
+        print("OOB pixel:", p)
+        return
+
     if do_depth:
         if depth >= -1 and depth <= depth_buffer[pixel]:
             depth_buffer[pixel] = depth
         else:
             do_draw = False
 
-    if not (0 <= pixel[0] < width and 0 <= pixel[1] < height):
-        do_draw = False
     if do_draw:
         img.putpixel(pixel, color)
 
@@ -72,11 +75,30 @@ def to_sRGB(x):
     return 255*((1.055*x**(1/2.4))-0.055)
 
 
+def to_hyp(v):
+    # v[:2]-=[width/2,height/2] # no need to perspective correct coords
+    w = v[3]
+    v[4:] /= w
+    v[2] /= w
+    v[3] = 1/w
+    # v[:2]+=[width/2,height/2]
+    return v
+
+
+def from_hyp(v):
+    w_ = v[3]
+    v[4:] /= w_
+    v[2] /= w_
+    v[3] = 1/w_
+    return v
+
+
 to_linear = np.vectorize(to_linear)
 to_sRGB = np.vectorize(to_sRGB)
 
 for l in lines:
     l = list(filter(len, l.split(' ')))
+    print('--------------')
     print(l)
     if l[0] == 'png':
         width, height = (int(l[1]), int(l[2]))
@@ -88,6 +110,8 @@ for l in lines:
         do_depth = True
     elif l[0] == 'sRGB':
         do_srgb = True
+    elif l[0] == 'hyp':
+        do_hyp = True
 
     elif l[0] == 'rgb':
         curr_color = list(map(int, l[1:]))+[255]
@@ -109,26 +133,33 @@ for l in lines:
         vs = np.stack(map(viewport_transform, vs))
         print("view port transformed:\n", vs)
 
+        # Do hyp correction
+        if do_hyp:
+            vs = np.stack(map(to_hyp, vs))
+            print("hyp corrected:\n", vs)
+
         # DDA on y for each edge
         # print("Pairs\n", np.stack(combinations(vs, 2)))
         edge_points = sum(map(lambda pair: dda(
             *pair, 1), combinations(vs, 2)), [])
         edge_points = np.array(
             sorted(edge_points, key=lambda x: x[1])).reshape(-1, 2, 8)
-        # edge_points = np.unique(edge_points, axis=0)
         # print("DDA edges\n", edge_points)
 
         # DDA on x for each scan line
         vs = sum(map(lambda pair: dda(*pair, 0), edge_points), [])
         vs = np.array(vs)
         # print("pixels", vs)
+        if not len(vs):
+            print("Nothing to draw!")
+            continue
 
         # Draw pixel
+        if do_hyp:
+            vs = np.stack(map(from_hyp, vs))
         if do_srgb:
             vs[:, 4:7] = to_sRGB(vs[:, 4:7])
         list(map(draw, vs))
-
-    print('--------------')
 
 
 img.save(destination)
