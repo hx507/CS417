@@ -9,10 +9,11 @@ np.set_printoptions(precision=2, suppress=True, threshold=90)
 lines = open(sys.argv[1], 'r').readlines()
 lines = map(lambda x: x.strip().replace('\t', ' '), lines)
 lines = filter(lambda x: x.startswith(
-    ('xyzw', 'png', 'rgb', 'tri', 'depth', 'sRGB', 'hyp')), lines)
+    ('xyzw', 'png', 'rgb', 'tri', 'depth', 'sRGB', 'hyp', 'fsaa')), lines)
 do_depth = False
 do_srgb = False
 do_hyp = False
+do_fsaa = False
 
 verticies = []
 curr_color = [255, 255, 255, 255]
@@ -112,6 +113,12 @@ for l in lines:
         do_srgb = True
     elif l[0] == 'hyp':
         do_hyp = True
+    elif l[0] == 'fsaa':
+        do_fsaa = True
+        fsaa_level = int(l[1])
+        width *= fsaa_level
+        height *= fsaa_level
+        img = Image.new('RGBA', (width, height), color=(0, 0, 0, 0))
 
     elif l[0] == 'rgb':
         curr_color = list(map(int, l[1:]))+[255]
@@ -136,7 +143,6 @@ for l in lines:
         # Do hyp correction
         if do_hyp:
             vs = np.stack(map(to_hyp, vs))
-            print("hyp corrected:\n", vs)
 
         # DDA on y for each edge
         # print("Pairs\n", np.stack(combinations(vs, 2)))
@@ -150,9 +156,6 @@ for l in lines:
         vs = sum(map(lambda pair: dda(*pair, 0), edge_points), [])
         vs = np.array(vs)
         # print("pixels", vs)
-        if not len(vs):
-            print("Nothing to draw!")
-            continue
 
         # Draw pixel
         if do_hyp:
@@ -161,5 +164,21 @@ for l in lines:
             vs[:, 4:7] = to_sRGB(vs[:, 4:7])
         list(map(draw, vs))
 
-
+if do_fsaa:
+    # img = img.resize([width//fsaa_level, height//fsaa_level],
+    # resample=Image.BILINEAR)
+    # (60, 40, 4)
+    img = np.array(img).transpose([1,0,2])
+    print(img.shape)
+    ds = np.zeros([width//fsaa_level, height//fsaa_level, 4])
+    for i in range(width//fsaa_level):
+        for j in range(height//fsaa_level):
+            s = np.zeros(4)
+            for ii in range(fsaa_level):
+                for jj in range(fsaa_level):
+                    # print(f"{i=},{j=},{ii=},{jj=}")
+                    s += img[i*fsaa_level+ii, j*fsaa_level+jj, :]
+            ds[i, j, :] = s/fsaa_level**2
+    img = img.transpose([1,0,2])
+    img = Image.fromarray(ds, 'RGBA')
 img.save(destination)

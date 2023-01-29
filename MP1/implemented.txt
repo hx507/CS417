@@ -4,3 +4,6 @@ mp1req2.txt
 mp1depth.txt
 mp1srgb.txt
 mp1hyp.txt
+mp1fsaa2.txt
+mp1fsaa3.txt
+mp1fsaa4.txt
