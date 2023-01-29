@@ -19,7 +19,7 @@ for f in lines:
     diff_file = f"test/{name}_diff.png"
     look_file = f"test/{name}_look.png"
     cmp = subprocess.run(
-        [f"compare", "-metric", "ae", "-fuzz", "2%",  ref_file, gen_file, ae_file], capture_output=True)
+        [f"compare", "-metric", "ae", "-fuzz", "1%",  ref_file, gen_file, ae_file], capture_output=True)
     if cmp.returncode:
         err += [[name, cmp.returncode]]
     system(

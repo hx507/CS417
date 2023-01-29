@@ -8,3 +8,5 @@ mp1fsaa2.txt
 mp1fsaa3.txt
 mp1fsaa4.txt
 mp1line.txt
+mp1cull.txt
+mp1rgba.txt

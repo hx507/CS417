@@ -9,11 +9,13 @@ np.set_printoptions(precision=2, suppress=True, threshold=90)
 lines = open(sys.argv[1], 'r').readlines()
 lines = map(lambda x: x.strip().replace('\t', ' '), lines)
 lines = filter(lambda x: x.startswith(
-    ('xyzw', 'png', 'rgb', 'tri', 'depth', 'sRGB', 'hyp', 'fsaa', 'line')), lines)
+    ('xyzw', 'png', 'rgb', 'tri', 'depth', 'sRGB', 'hyp', 'fsaa', 'line', 'cull', 'rgba')), lines)
 do_depth = False
 do_srgb = False
 do_hyp = False
 do_fsaa = False
+do_cull = False
+do_rgba = False
 
 verticies = []
 curr_color = [255, 255, 255, 255]
@@ -44,6 +46,17 @@ def dda(a, b, d):
     return points
 
 
+def blend(cs, cd):  # [1,2,3,255]->[1,2,3,255]->[...]
+    a_s, a_d = cs[-1]/255., cd[-1]/255.
+    ap = a_s + a_d*(1-a_s)
+    c = np.zeros([4])
+    # c[:-1] = (a_s/ap)*np.array(cs)[:-1] + ((1-a_s)*a_d/ap)*np.array(cd)[:-1]
+    c[:-1] = (a_s*np.array(cs)[:-1] + a_d*(1-a_s)*np.array(cd)[:-1])/ap
+    c[-1] = ap*255
+    # c[:-1] = to_sRGB(c[:-1])
+    return tuple(map(round, c))
+
+
 def draw(p):
     do_draw = True
     pixel, color = tuple(map(round, p[:2])), tuple(map(round, p[4:]))
@@ -57,6 +70,9 @@ def draw(p):
             depth_buffer[pixel] = depth
         else:
             do_draw = False
+    if do_rgba:
+        cd = img.getpixel(pixel)
+        color = blend(color, cd)
 
     if do_draw:
         img.putpixel(pixel, color)
@@ -123,6 +139,13 @@ def fsaa(img):
     return Image.fromarray(ds.astype(np.int8), 'RGBA')
 
 
+def should_cull(vs):
+    # formula: (p2.y - p1.y) * (p3.x - p2.x) - (p2.x - p1.x) * (p3.y - p2.y)
+    val = (vs[1, 1]-vs[0, 1])*(vs[2, 0]-vs[1, 0]) - \
+        (vs[1, 0]-vs[0, 0])*(vs[2, 1]-vs[1, 1])
+    return val < 0
+
+
 for l in lines:
     l = list(filter(len, l.split(' ')))
     print('--------------')
@@ -145,6 +168,11 @@ for l in lines:
         width *= fsaa_level
         height *= fsaa_level
         img = Image.new('RGBA', (width, height), color=(0, 0, 0, 0))
+    elif l[0] == 'cull':
+        do_cull = True
+    elif l[0] == 'rgba':
+        do_rgba = True
+        curr_color = list(map(int, l[1:-1]))+[float(l[-1])*255]
 
     elif l[0] == 'rgb':
         curr_color = list(map(int, l[1:]))+[255]
@@ -172,6 +200,9 @@ for l in lines:
         vs = np.array(verticies)[list(
             map(lambda x: int(x)-1 if int(x) > 0 else int(x), l[1:]))]
 
+        # cull filtering
+        if do_cull and should_cull(vs):
+            continue
         # sRGB transform
         if do_srgb:
             vs[:, 4:7] = to_linear(vs[:, 4:7])
@@ -200,7 +231,8 @@ for l in lines:
         # Draw pixel
         if do_hyp:
             vs = np.stack(map(from_hyp, vs))
-        if do_srgb and not do_fsaa:
+        # if do_srgb and not (do_fsaa or do_rgba):
+        if do_srgb and not (do_fsaa):
             vs[:, 4:7] = to_sRGB(vs[:, 4:7])
         list(map(draw, vs))
 
