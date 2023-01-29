@@ -1,3 +1,4 @@
+import math
 from math import ceil
 import sys
 import numpy as np
@@ -7,7 +8,9 @@ np.set_printoptions(precision=2, suppress=True)
 
 lines = open(sys.argv[1], 'r').readlines()
 lines = map(lambda x: x.strip().replace('\t', ' '), lines)
-lines = filter(lambda x: x.startswith(('xyzw', 'png', 'rgb', 'tri')), lines)
+lines = filter(lambda x: x.startswith(
+    ('xyzw', 'png', 'rgb', 'tri', 'depth')), lines)
+do_depth = False
 
 verticies = []
 curr_color = [255, 255, 255, 255]
@@ -36,6 +39,14 @@ def dda(a, b, d):
     return points
 
 
+def draw(p):
+    pixel, color = tuple(map(round, p[:2])), tuple(map(round, p[4:]))
+    depth = p[2]/p[3]
+    if not do_depth or (depth >= -1 and depth < depth_buffer[pixel]):
+        depth_buffer[pixel] = depth
+        img.putpixel(pixel, color)
+
+
 for l in lines:
     l = list(filter(len, l.split(' ')))
     print(l)
@@ -43,6 +54,10 @@ for l in lines:
         width, height = (int(l[1]), int(l[2]))
         img = Image.new('RGBA', (width, height), color=(0, 0, 0, 0))
         destination = l[3]
+
+    elif l[0] == 'depth':
+        depth_buffer = np.ones([width, height])
+        do_depth = True
 
     elif l[0] == 'rgb':
         curr_color = list(map(int, l[1:]))+[255]
@@ -58,20 +73,23 @@ for l in lines:
 
         # Do viewport transform
         vs = np.stack(map(viewport_transform, vs))
-        print("view port transformed:\n", vs)
+        # print("view port transformed:\n", vs)
 
+        # DDA on y for each edge
         edge_points = sum(map(lambda pair: dda(
             *pair, 1), combinations(vs, 2)), [])
-        # edge_points = []
-        # for pair in combinations(vs, 2):
-        # print("pair:", pair)
-        # edge_points += dda(*pair, 1)
         edge_points = np.array(
             sorted(edge_points, key=lambda x: x[1])).reshape(-1, 2, 8)
         # edge_points = np.unique(edge_points, axis=0)
-        print(edge_points)
+        # print("DDA edges", edge_points)
 
-        # DDA in y along edges
+        # DDA on x for each scan line
+        vs = sum(map(lambda pair: dda(*pair, 0), edge_points), [])
+        vs = np.array(vs)
+        # print("pixels", vs)
+
+        # Draw pixel
+        list(map(draw, vs))
 
     print('--------------')
 
