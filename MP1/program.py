@@ -4,6 +4,7 @@ import sys
 import numpy as np
 from PIL import Image, ImageDraw
 from itertools import combinations
+from collections import defaultdict
 np.set_printoptions(precision=2, suppress=True, threshold=90)
 
 lines = open(sys.argv[1], 'r').readlines()
@@ -50,11 +51,14 @@ def blend(cs, cd):  # [1,2,3,255]->[1,2,3,255]->[...]
     a_s, a_d = cs[-1]/255., cd[-1]/255.
     ap = a_s + a_d*(1-a_s)
     c = np.zeros([4])
-    # c[:-1] = (a_s/ap)*np.array(cs)[:-1] + ((1-a_s)*a_d/ap)*np.array(cd)[:-1]
-    c[:-1] = (a_s*np.array(cs)[:-1] + a_d*(1-a_s)*np.array(cd)[:-1])/ap
+    c[:-1] = (a_s/ap)*np.array(cs)[:-1] + ((1-a_s)*a_d/ap)*np.array(cd)[:-1]
+    # c[:-1] = (a_s*np.array(cs)[:-1] + a_d*(1-a_s)*np.array(cd)[:-1])/ap
     c[-1] = ap*255
     # c[:-1] = to_sRGB(c[:-1])
-    return tuple(map(round, c))
+    return c
+
+
+img_buf = defaultdict(lambda: np.zeros([4]))
 
 
 def draw(p):
@@ -71,11 +75,14 @@ def draw(p):
         else:
             do_draw = False
     if do_rgba:
-        cd = img.getpixel(pixel)
+        color = np.array(p[4:])
+        cd = img_buf[pixel]
         color = blend(color, cd)
+        img_buf[pixel] = color
+        do_draw = False
 
     if do_draw:
-        img.putpixel(pixel, color)
+        img.putpixel(pixel, tuple(color))
 
 
 def to_linear(x):
@@ -231,11 +238,19 @@ for l in lines:
         # Draw pixel
         if do_hyp:
             vs = np.stack(map(from_hyp, vs))
-        # if do_srgb and not (do_fsaa or do_rgba):
-        if do_srgb and not (do_fsaa):
+        if do_srgb and not (do_fsaa or do_rgba):
+            # if do_srgb and not (do_fsaa):
             vs[:, 4:7] = to_sRGB(vs[:, 4:7])
         list(map(draw, vs))
 
 if do_fsaa:
     img = fsaa(img)
+if do_rgba:
+    for x in range(img.width):
+        for y in range(img.height):
+            color = np.array(img_buf[(x, y)])
+            color[:-1] = to_sRGB(color[:-1])
+            color = tuple(map(round, color))
+            img.putpixel((x, y), color)
+
 img.save(destination)
