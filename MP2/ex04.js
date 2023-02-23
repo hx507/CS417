@@ -103,6 +103,7 @@ function draw(milliseconds) { // for the main dancing logo
 
     var offset = normalize(seconds);
     var scale = (Math.sin(normalize(cycle(milliseconds, 1000, speed * 0.23)) * 3.2) + 1) / 2;
+    // 
 
     // values that do not vary between vertexes or fragments are called "uniforms"
     gl.uniform1f(gl.getUniformLocation(program, 'seconds'), seconds)
@@ -118,12 +119,14 @@ function draw(milliseconds) { // for the main dancing logo
     ])
 
     if (window.do_cpu_move) {
-        pos = [...window.geom_position_f32]; // copy positions
+        let pos = new Float32Array(window.geom_position_f32)
+
+        console.log(pos)
         for (let i = 0; i < pos.length / 4; i++) {
-            let ofs_vec = randN(4, i);
-            for (let j = i * 4; j < i * 4 + 4; j++) {
-                //pos[j] += ofs_vec[j % 4];
-                pos[j] += 1;
+            let nd_rand = 4; // only randomly offset 3 dimensions
+            let ofs_vec = randN(nd_rand, i*7);
+            for (let j = i * 4; j < i * 4 + nd_rand; j++) {
+                pos[j] += ofs_vec[j % 4] * (offset*scale)*4;
             }
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, window.geom_position_buf)
