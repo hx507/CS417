@@ -10,12 +10,20 @@
         [Required] Logo moving and rescaling </label>
     <br>
     <label>
-        <input type="radio" name="group" value="" id="rad2" onclick="setupWarmUp(0)">
+        <input type="radio" name="group" value="" id="rad2" onclick="setupWarmUp()">
         [Required] Another animation adapted from warm up 2 </label>
     <br>
     <label>
-        <input type="radio" name="group" value="" id="rad3" onclick="window.do_cpu_move=true">
-        [Optional] CPU vertex movement </label>
+        <input type="radio" name="group" value="" id="rad3" onclick="setup(); window.do_cpu_move=true">
+        [Optional] CPU vertex movement (random offset every cycle) </label>
+    <br>
+    <label>
+        <input type="radio" name="group" value="" id="rad4" onclick="setup(); window.do_gpu_move=true">
+        [Optional] GPU vertex movement </label>
+    <br>
+    <label>
+        <input type="radio" name="group" value="" id="rad5" onclick="setupPsy()">
+        [Optional] Psychedelic </label>
 
     <br>
     <canvas width="300" height="300"></canvas>
