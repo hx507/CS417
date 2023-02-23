@@ -1,11 +1,26 @@
 <!DOCTYPE html>
 <head lang="en">
-<meta charset="utf-8">
-<title>Motion in WebGL</title>
-<script src="ex04.js"></script>
+    <meta charset="utf-8">
+    <title>Motion in WebGL</title>
+    <script src="ex04.js"></script>
 </head>
 <body>
-<canvas width="300" height="300"></canvas>
+    <label>
+        <input type="radio" name="group" value="" id="rad1" onclick="setup()" checked>
+        [Required] Logo moving and rescaling </label>
+    <br>
+    <label>
+        <input type="radio" name="group" value="" id="rad2" onclick="setupWarmUp(0)">
+        [Required] Another animation adapted from warm up 2 </label>
+    <br>
+    <label>
+        <input type="radio" name="group" value="" id="rad3" onclick="window.do_cpu_move=true">
+        [Optional] CPU vertex movement </label>
+
+    <br>
+    <canvas width="300" height="300"></canvas>
+
+
 </body>
 </html>
 
