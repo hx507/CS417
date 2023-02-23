@@ -19,14 +19,18 @@
     <br>
     <label>
         <input type="radio" name="group" value="" id="rad4" onclick="setup(); window.do_gpu_move=true">
-        [Optional] GPU vertex movement </label>
+        [Optional] GPU vertex movement (somewhat random offset every cycle)</label>
     <br>
     <label>
         <input type="radio" name="group" value="" id="rad5" onclick="setupPsy()">
         [Optional] Psychedelic </label>
+    <br>
+    <label>
+        <input type="radio" name="group" value="" id="rad4" onclick="setup(); window.do_mouse_response=true">
+        [Optional] Mouse movement (controlling 2nd derivative like a gyro stick, please move mouse onto canvas) </label>
 
     <br>
-    <canvas width="300" height="300"></canvas>
+    <canvas width="380" height="380"></canvas>
 
 
 </body>

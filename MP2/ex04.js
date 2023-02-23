@@ -66,6 +66,10 @@ function cycle(x, p, speed) { // Map to a rational ring
 
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
 
+function clamp_all(nums, min, max) {
+    return nums.map((num) => clamp(num, min, max))
+}
+
 function cancelAllAnimationFrames() {
     var id = window.requestAnimationFrame(function() {});
     while (id--) {
@@ -102,8 +106,22 @@ function draw(milliseconds) { // for the main dancing logo
     var seconds = cycle(milliseconds, 1000, speed)
 
     var offset = normalize(seconds);
+    offset = [offset, offset, offset]
     var scale = (Math.sin(normalize(cycle(milliseconds, 1000, speed * 0.23)) * 3.2) + 1) / 2;
-    // 
+
+    if (window.do_mouse_response) { // use mouse vector as 2nd derivative
+        let dt = 1 / 50;
+        offset = window.curr_vel;
+        for (let i = 0; i < 2; i++) {
+            window.curr_vel[i] -= window.mouse_loc[i] * dt*5 * (i ? 1 : -1);
+            window.curr_vel = clamp_all(window.curr_vel, -1, 1);
+            window.curr_ofs[i] += window.curr_vel[i]*dt ;
+            window.curr_ofs = clamp_all(window.curr_ofs, -1, 1);
+        }
+        scale = 0.5; // Do not dynamic scale
+        offset = window.curr_ofs;
+        console.log(window.curr_vel, curr_ofs);
+    }
 
     // values that do not vary between vertexes or fragments are called "uniforms"
     gl.uniform1f(gl.getUniformLocation(program, 'seconds'), seconds)
@@ -111,23 +129,23 @@ function draw(milliseconds) { // for the main dancing logo
     gl.uniform1f(gl.getUniformLocation(program, 'do_gpu_move'), 0)
 
     scale = clamp(scale, 0.1, 2);
-    offset = clamp(offset, -1, 1);
+    //offset = clamp_all(offset, -1, 1);
     gl.uniformMatrix4fv(gl.getUniformLocation(program, 'transform'), true, [
-        scale, 0, 0, offset * 1,
-        0, scale, 0, offset * 1,
-        0, 0, scale, offset * 1,
+        scale, 0, 0, offset[0] * 1,
+        0, scale, 0, offset[1] * 1,
+        0, 0, scale, offset[2] * 1,
         0, 0, 0, 1
     ])
 
     if (window.do_cpu_move) {
-        if (scale <= 0.1) random_seed++; // rotate random offset seed for each animation iteration
+        //if (scale <= 0.1) random_seed++; // rotate random offset seed for each animation iteration
         let pos = new Float32Array(window.geom_position_f32)
 
         for (let i = 0; i < pos.length / 4; i++) {
             let nd_rand = 4; // only randomly offset 3 dimensions
             let ofs_vec = randN(nd_rand, i * random_seed);
-            for (let j = i * 4; j < i * 4 + nd_rand; j++) {
-                pos[j] += ofs_vec[j % 4] * (offset * scale) * 2;
+            for (let j = i * 4; j < i * 4 + nd_rand; j++) { // randomly poke vertices
+                pos[j] += ofs_vec[j % 4] * (offset[0] * scale) * 2;
             }
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, window.geom_position_buf)
@@ -146,10 +164,28 @@ async function reset() { // reset states
     window.random_seed = 102; // my picked random seed at init
     window.do_cpu_move = false;
     window.do_gpu_move = false;
+    window.do_mouse_response = false;
+    window.curr_vel = [0, 0, 0];
+    window.curr_ofs = [0, 0, 0];
+    window.mouse_loc = [0, 0];
 }
 
 async function setup(event) {
     reset();
+
+    // Register mouse tracking utility
+    document.querySelector('canvas').onmousemove = function(e) {
+        let x = e.pageX - e.currentTarget.offsetLeft;
+        let y = e.pageY - e.currentTarget.offsetTop;
+        x /= e.target.width;
+        x = (x - 0.5) * 2;
+        y /= e.target.height;
+        y = (y - 0.5) * 2; // Map into -1,1
+
+        window.mouse_loc = [x, y];
+    }
+
+    // Init new animation
     cancelAllAnimationFrames();
     window.gl = document.querySelector('canvas').getContext('webgl2')
     let vs = await fetch('ex04-vertex.glsl').then(res => res.text())
@@ -214,7 +250,6 @@ async function setupPsy(event) {
     let fs = await fetch('psychedelic/ex04-fragment.glsl').then(res => res.text())
     compileAndLinkGLSL(vs, fs)
     let data = await fetch('psychedelic/ex04-geometry.json').then(r => r.json())
-    console.log(fs)
     window.geom = setupGeomery(data)
 
     requestAnimationFrame(drawPsy)
