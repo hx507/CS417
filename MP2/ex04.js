@@ -108,7 +108,7 @@ function draw(milliseconds) { // for the main dancing logo
     // values that do not vary between vertexes or fragments are called "uniforms"
     gl.uniform1f(gl.getUniformLocation(program, 'seconds'), seconds)
     gl.uniform1f(gl.getUniformLocation(program, 'global_scale'), 1. / 4)
-        gl.uniform1f(gl.getUniformLocation(program, 'do_gpu_move'), 0)
+    gl.uniform1f(gl.getUniformLocation(program, 'do_gpu_move'), 0)
 
     scale = clamp(scale, 0.1, 2);
     offset = clamp(offset, -1, 1);
@@ -198,7 +198,7 @@ function drawPsy(milliseconds) { // for the main dancing logo
     // values that do not vary between vertexes or fragments are called "uniforms"
     gl.uniform1f(gl.getUniformLocation(program, 'seconds'), seconds)
     gl.uniform1f(gl.getUniformLocation(program, 'global_scale'), 1. / 4)
-        gl.uniform1f(gl.getUniformLocation(program, 'do_gpu_move'), 0)
+    gl.uniform1f(gl.getUniformLocation(program, 'do_gpu_move'), 0)
 
     gl.bindVertexArray(geom.vao)
     gl.drawElements(geom.mode, geom.count, geom.type, 0)
@@ -214,6 +214,7 @@ async function setupPsy(event) {
     let fs = await fetch('psychedelic/ex04-fragment.glsl').then(res => res.text())
     compileAndLinkGLSL(vs, fs)
     let data = await fetch('psychedelic/ex04-geometry.json').then(r => r.json())
+    console.log(fs)
     window.geom = setupGeomery(data)
 
     requestAnimationFrame(drawPsy)

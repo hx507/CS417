@@ -8,13 +8,10 @@ uniform float seconds;
 out vec4 fragColor;
 
 void main() {
-    fragColor = vColor;
-    //float c = cos(seconds)*0.5+0.5, s = sin(seconds)*0.5+0.5;
-    //fragColor = vec4(
-    //vColor.r*c + vColor.g*s,
-    //vColor.g*c - vColor.r*s,
-    //cos(vColor.b*20.-vColor.a*10.)*0.5+0.5,
-    //vColor.a
-    //);
+    fragColor = vec4(
+            (sin(vColor.x*vColor.x*seconds*100.)+1.)/2.,
+            (sin(vColor.y*vColor.y*seconds*100.)+1.)/2.,
+            vColor.zw);
+    //fragColor = vec4(0,0,0,0);
 }
 
