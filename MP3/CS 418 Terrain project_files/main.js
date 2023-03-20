@@ -230,52 +230,38 @@ function genTorus(options) {
 
 	const minor_radius = options.ring_puf;
 	const major_radius = 0.5;
+    let coord = (u,v)=> [
+        (major_radius+minor_radius*Math.cos(u))*Math.cos(v),
+        (major_radius+minor_radius*Math.cos(u))*Math.sin(v),
+        minor_radius*Math.sin(u)
+    ]
+    let normal = (u,v) => [Math.cos(u)*Math.cos(v),Math.sin(u)*Math.cos(v),Math.sin(v)];
 
-	let curr = 0;
-	for (let i = 0; i < options.n_ring; i++) {
-        const u1 = (Math.PI * 2 * (i / options.n_ring));
-        const u2 = (Math.PI * 2 * ((i+1) / options.n_ring));
-		const vtx_base = grid.attributes.position.length;
+    let curr=0;
+	for (let i = 0; i < options.n_ring+2; i++) {
+        const v = (Math.PI * 2 * (i / options.n_ring));
 
-		const x1 = Math.sin(u1) * major_radius;
-		const y1 = Math.cos(u1) * major_radius;
-
-		const x2 = Math.sin(u2) * major_radius;
-		const y2 = Math.cos(u2) * major_radius;
-
-		for (let j = 0; j < options.ring_res+1; j++) {
-            const v = (Math.PI * 2 * ((j) / options.ring_res));
-			const c2 = Math.sin(v);
-			const c1 = Math.cos(v);
-
-			const vtx1 = [x1 + x1 * (minor_radius + c1) * minor_radius, y1 + y1 * (minor_radius + c1) * minor_radius, c2 * minor_radius * 0.5];
-			const vtx2 = [x2 + x2 * (minor_radius + c1) * minor_radius, y2 + y2 * (minor_radius + c1) * minor_radius, c2 * minor_radius * 0.5];
-
-			grid.attributes.position.push(vtx1, vtx2);
-
-            let f = 1;
-            //let normal1 = [
-                //f*(major_radius+minor_radius*Math.cos(u1))*Math.cos(v),
-                //f*(major_radius+minor_radius*Math.cos(u1))*Math.sin(v),
-                //f*minor_radius*Math.sin(u1)
-            //]
-            //let normal2 = [
-               //f* (major_radius+minor_radius*Math.cos(u2))*Math.cos(v),
-               //f* (major_radius+minor_radius*Math.cos(u2))*Math.sin(v),
-               //f* minor_radius*Math.sin(u2)
-            //]
-            let calc = (v,u) => [Math.cos(u)*Math.cos(v),Math.sin(u)*Math.cos(v),Math.sin(v)];
-            let normal1 = calc(u1,v);
-            let normal2 = calc(u2,v);
-
-			grid.attributes.normal.push(normal1, normal2);
-
-			curr += 2;
-
-			if (j != 0) {
-				grid.triangles.push([curr - 1, curr - 2, curr - 3], [curr - 3, curr - 2, curr - 4]);
-			}
+        let base=0;
+		for (let j = 0; j < options.ring_res; j++) {
+            const u = (Math.PI * 2 * ((j) / options.ring_res));
+            
+            vtx = coord(u,v);
+            n = normal(v,u);
+            grid.attributes.position.push(vtx);
+            grid.attributes.normal.push(n);
+            if(i!=0){
+                grid.triangles.push([curr,curr-1,curr-options.ring_res])
+                grid.triangles.push([curr,curr-options.ring_res+1,curr-options.ring_res])
+            }
+            curr++;
 		}
+
+        //for(let j=base;j<grid.attributes.position.length;j++)
+        //for(let k=base;k<grid.attributes.position.length;k++)
+        //for(let l=base;l<grid.attributes.position.length;l++)
+            //grid.triangles.push([j,k,l])
+        if(i!=0)
+        base+=options.ring_res;
 	}
     //grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
     console.log(grid.attributes.normal)
