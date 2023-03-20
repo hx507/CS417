@@ -16,7 +16,7 @@ function fillScreen() {
 	window.p = m4perspNegZ(1, 9, 0.7, canvas.width, canvas.height);
 	if (window.gl) {
 		gl.viewport(0, 0, canvas.width, canvas.height);
-		window.p = m4perspNegZ(1, 9, 0.8, gl.canvas.width, gl.canvas.height);
+		window.p = m4perspNegZ(1, 9, 0.7, gl.canvas.width, gl.canvas.height);
 		draw();
 	}
 }
@@ -216,35 +216,49 @@ function genTerrain(options) {
 		for (let j = 0; j < options.resolution; j++) {
 			const x = -1 + i * step;
 			const y = -1 + j * step;
-					grid.attributes.position.push([x,y,0]);
+		    grid.attributes.position.push([x, y, 0]);
+		}
+	}
 
-			const ps = [[x, y, 0], [x + step, y, 0], [x, y + step, 0], [x + step, y + step, 0]];
-			for (const i in ps) {
-				const p = ps[i];
-				if (grid.attributes.position.findIndex(pp => norm(m4sub_(pp, p)) <= eps) == -1) {
-					grid.attributes.position.push(p);
-				} else {
-					console.log('reuse!');
-				}
-			}
-
-			const ks = ps.map(p => grid.attributes.position.findIndex(pp => norm(m4sub_(pp, p)) <= eps));
+	for (let i = 0; i < options.resolution - 1; i++) {
+		for (let j = 0; j < options.resolution - 1; j++) {
+			const idx = (x, y) => (x * options.resolution + y);
+			const ks = [idx(i, j), idx(i + 1, j), idx(i, j + 1), idx(i + 1, j + 1)];
 			grid.triangles.push([ks[0], ks[1], ks[2]], [ks[3], ks[2], ks[1]]);
 		}
 	}
 
 	// Do cuts:
+	const max_height = 2;
 	for (let i = 0; i < options.slices; i++) {
 		const p = [Math.random() * 2 - 1, Math.random() * 2 - 1, 0];
 		const cut2 = [Math.random() * 2 - 1, Math.random() * 2 - 1, 0];
-
 		const dir = m4normalized_(m4sub_(p, cut2));
+
 		for (let j = 0; j < grid.attributes.position.length; j++) {
 			const vtx = grid.attributes.position[j];
-			const va = m4sub_(vtx, p);
-			const det = m4dot_(va, dir);
-			vtx[2] += det >= 0 ? 1 / options.slices : -1 / options.slices;
+			const det = m4dot_(m4sub_(vtx, p), dir);
 
+			const delta = max_height / options.slices;
+			vtx[2] += det >= 0 ? delta : -delta;
+
+			grid.attributes.position[j] = vtx;
+		}
+	}
+
+	// Post process
+	const zmax = 0;
+	const zmin = -1;
+	const c = 1 / 2;
+	const xmax = Math.max(...grid.attributes.position.map(x => x[2]));
+	const xmin = Math.min(...grid.attributes.position.map(x => x[2]));
+	const h = (xmax - xmin) * c;
+	console.log(h);
+	if (h != 0) {
+		for (let j = 0; j < grid.attributes.position.length; j++) {
+			const vtx = grid.attributes.position[j];
+			const newz = (vtx[2] - zmin) * h / (zmax - zmin) - h / 2;
+			vtx[2] = newz;
 			grid.attributes.position[j] = vtx;
 		}
 	}
