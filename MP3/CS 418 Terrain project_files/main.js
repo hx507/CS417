@@ -21,6 +21,9 @@ function fillScreen() {
 	}
 }
 
+/**
+ * Automatically calculate normal by looking at triangles
+ * */
 function addNormals(data) {
 	const normals = Array.from({length: data.attributes.position.length});
 	for (let i = 0; i < normals.length; i += 1) {
@@ -193,17 +196,17 @@ async function setupScene(scene, options) {
 	if (scene == 'debug') {
 		// Const data = await fetch('monkey.json').then(r => r.json());
 		data = await fetch('test.json').then(r => r.json());
-	addNormals(data);
+		addNormals(data);
 	} else if (scene == 'terrain') {
 		data = genTerrain(options, false);
-	addNormals(data);
+		addNormals(data);
 	} else if (scene == 'color') {
 		data = genTerrain(options, true);
-	addNormals(data);
+		addNormals(data);
 	} else if (scene == 'clif') {
 		window.do_clif = 1;
 		data = genTerrain(options, false);
-	addNormals(data);
+		addNormals(data);
 	} else if (scene == 'torus') {
 		data = genTorus(options);
 	} else if (scene == 'sphere') {
@@ -220,113 +223,105 @@ function norm(x, length) {
 	return norm ** (1 / length);
 }
 
+/* Generate a sphere geometry */
 function genSphere(options) {
 	console.log('genTorus!');
 	const grid
         = {triangles: [],
         	attributes:
-            {position: [], color: [], is_clif: [],normal:[]
+            {position: [], color: [], is_clif: [], normal: [],
             },
         };
 
-	const r = .5;
-    let coord = (u,v) => [Math.cos(u)*Math.sin(v)*r, Math.sin(u)*Math.sin(v)*r, Math.cos(v)*r];
-    let normal = (u,v) => [Math.cos(u)*Math.sin(v)*r, Math.sin(u)*Math.sin(v)*r, Math.cos(v)*r];
+	const r = 0.5; // Control the radius of the sphere here
+	const coord = (u, v) => [Math.cos(u) * Math.sin(v) * r, Math.sin(u) * Math.sin(v) * r, Math.cos(v) * r];
+	const normal = (u, v) => [Math.cos(u) * Math.sin(v) * r, Math.sin(u) * Math.sin(v) * r, Math.cos(v) * r];
+	// Parametric formulas for sphere
 
-    let curr=0;
+	let curr = 0;
 
-    for (let j = 0; j < options.long_res; j++) {
-        const u = (Math.PI *2 * ((j) / options.long_res));
+	for (let j = 0; j < options.long_res; j++) {
+		const u = (Math.PI * 2 * ((j) / options.long_res));
 
-        for (let i = 0; i < options.lat_res+1; i++) {
-            const v = (Math.PI *  2*(i / (options.lat_res+1)));
-            vtx = coord(u,v);
-            n = normal(u,v);
-            grid.attributes.position.push(vtx);
-            grid.attributes.normal.push(n);
+		for (let i = 0; i < options.lat_res + 1; i++) {
+			const v = (Math.PI * 2 * (i / (options.lat_res + 1)));
+			vtx = coord(u, v);
+			n = normal(u, v);
+			grid.attributes.position.push(vtx);
+			grid.attributes.normal.push(n);
 
-            let cycle = options.lat_res;
-            //if(j!=0){
-                grid.triangles.push([curr,curr-1,curr-cycle])
-                grid.triangles.push([curr,curr-1,curr-cycle+1])
-                grid.triangles.push([curr,curr-1,curr-cycle-1])
-
-                grid.triangles.push([curr,curr-cycle+1,curr-cycle-1])
-                grid.triangles.push([curr,curr-cycle,curr-cycle-1])
-                grid.triangles.push([curr,curr-cycle,curr-cycle+1])
-            //}
-            curr++;
+			const cycle = options.lat_res;
+			grid.triangles.push([curr, curr - 1, curr - cycle], [curr, curr - 1, curr - cycle + 1], [curr, curr - 1, curr - cycle - 1], [curr, curr - cycle + 1, curr - cycle - 1], [curr, curr - cycle, curr - cycle - 1], [curr, curr - cycle, curr - cycle + 1]);
+			curr++;
 		}
-
 	}
-    //grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
+	// Grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
+	// Parametric formula is already normalized, no need to do it again
 
 	for (const i in grid.attributes.position) {
 		grid.attributes.color.push([1, 0.373, 0.02, 1]);
 		grid.attributes.is_clif.push([0]);
-		for (let i = 0; i < grid.attributes.position.length; i++) {
-		}
+		for (let i = 0; i < grid.attributes.position.length; i++) {}
 	}
 
 	return grid;
 }
 
+/* Generate a torus geometry */
 function genTorus(options) {
 	console.log('genTorus!');
 	const grid
         = {triangles: [],
         	attributes:
-            {position: [], color: [], is_clif: [],normal:[]
+            {position: [], color: [], is_clif: [], normal: [],
             },
         };
 
 	const minor_radius = options.ring_puf;
 	const major_radius = 0.5;
-    let coord = (u,v)=> [
-        (major_radius+minor_radius*Math.cos(u))*Math.cos(v),
-        (major_radius+minor_radius*Math.cos(u))*Math.sin(v),
-        minor_radius*Math.sin(u)
-    ]
-    let normal = (u,v) => [Math.cos(u)*Math.cos(v),Math.sin(u)*Math.cos(v),Math.sin(v)];
+	const coord = (u, v) => [
+		(major_radius + minor_radius * Math.cos(u)) * Math.cos(v),
+		(major_radius + minor_radius * Math.cos(u)) * Math.sin(v),
+		minor_radius * Math.sin(u),
+	];
+	const normal = (u, v) => [Math.cos(u) * Math.cos(v), Math.sin(u) * Math.cos(v), Math.sin(v)];
 
-    let curr=0;
-	for (let i = 0; i < options.n_ring+2; i++) {
-        const v = (Math.PI * 2 * (i / options.n_ring));
+	let curr = 0;
+	for (let i = 0; i < options.n_ring + 2; i++) {
+		const v = (Math.PI * 2 * (i / options.n_ring));
 
-        let base=0;
+		let base = 0;
 		for (let j = 0; j < options.ring_res; j++) {
-            const u = (Math.PI * 2 * ((j) / options.ring_res));
-            
-            vtx = coord(u,v);
-            n = normal(v,u);
-            grid.attributes.position.push(vtx);
-            grid.attributes.normal.push(n);
-            if(i!=0){
-                grid.triangles.push([curr,curr-1,curr-options.ring_res])
-                grid.triangles.push([curr,curr-options.ring_res+1,curr-options.ring_res])
-            }
-            curr++;
+			const u = (Math.PI * 2 * ((j) / options.ring_res));
+
+			vtx = coord(u, v);
+			n = normal(v, u);
+			grid.attributes.position.push(vtx);
+			grid.attributes.normal.push(n);
+			if (i != 0) {
+				grid.triangles.push([curr, curr - 1, curr - options.ring_res], [curr, curr - options.ring_res + 1, curr - options.ring_res]);
+			}
+
+			curr++;
 		}
 
-        //for(let j=base;j<grid.attributes.position.length;j++)
-        //for(let k=base;k<grid.attributes.position.length;k++)
-        //for(let l=base;l<grid.attributes.position.length;l++)
-            //grid.triangles.push([j,k,l])
-        if(i!=0)
-        base+=options.ring_res;
+		if (i != 0) {
+			base += options.ring_res;
+		}
 	}
-    //grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
+	// Grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
+	// Parametric formula is already normalized, no need to do it again
 
 	for (const i in grid.attributes.position) {
 		grid.attributes.color.push([1, 0.373, 0.02, 1]);
 		grid.attributes.is_clif.push([0]);
-		for (let i = 0; i < grid.attributes.position.length; i++) {
-		}
+		for (let i = 0; i < grid.attributes.position.length; i++) {}
 	}
 
 	return grid;
 }
 
+/* Generate a terrain geometry. If do_color, also generate the accommodating color map as colored vertex data */
 function genTerrain(options, do_color) {
 	console.log('genTerrain!');
 	const eps = 1e-3;
@@ -337,6 +332,7 @@ function genTerrain(options, do_color) {
             {position: [], color: [], is_clif: [],
             },
         };
+	// Generate grid:
 	for (let i = 0; i < options.resolution; i++) {
 		for (let j = 0; j < options.resolution; j++) {
 			const x = -1 + i * step;
@@ -424,7 +420,8 @@ function genTerrain(options, do_color) {
 	return grid;
 }
 
-// https://stackoverflow.com/questions/5137831/map-a-range-of-values-e-g-0-255-to-a-range-of-colours-e-g-rainbow-red-b
+// Credit: https://stackoverflow.com/questions/5137831/map-a-range-of-values-e-g-0-255-to-a-range-of-colours-e-g-rainbow-red-b
+// Sample a color from the rainbow at a given place of the rainbow.
 function RainBowColor(length, maxLength) {
 	const i = (length * 255 / maxLength);
 	const r = Math.round(Math.sin(0.024 * i + 0) * 127 + 128);
