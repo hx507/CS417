@@ -205,7 +205,9 @@ async function setupScene(scene, options) {
 		data = genTerrain(options, false);
 	addNormals(data);
 	} else if (scene == 'torus') {
-		data = genTorus(options, false);
+		data = genTorus(options);
+	} else if (scene == 'sphere') {
+		data = genSphere(options);
 	}
 
 	console.log(data);
@@ -217,6 +219,58 @@ function norm(x, length) {
 	length = length ? Math.min(x.length, length) : x.length;
 	const norm = x.map(x => x * x).reduce((partialSum, a) => partialSum + a, 0);
 	return norm ** (1 / length);
+}
+
+function genSphere(options) {
+	console.log('genTorus!');
+	const grid
+        = {triangles: [],
+        	attributes:
+            {position: [], color: [], is_clif: [],normal:[]
+            },
+        };
+
+	const r = .5;
+    let coord = (u,v) => [Math.cos(u)*Math.sin(v)*r, Math.sin(u)*Math.sin(v)*r, Math.cos(v)*r];
+    let normal = (u,v) => [Math.cos(u)*Math.sin(v)*r, Math.sin(u)*Math.sin(v)*r, Math.cos(v)*r];
+
+    let curr=0;
+
+    for (let j = 0; j < options.long_res; j++) {
+        const u = (Math.PI *2 * ((j) / options.long_res));
+
+        for (let i = 0; i < options.lat_res+1; i++) {
+            const v = (Math.PI *  2*(i / (options.lat_res+1)));
+            vtx = coord(u,v);
+            n = normal(u,v);
+            console.log(vtx)
+            grid.attributes.position.push(vtx);
+            grid.attributes.normal.push(n);
+
+            let cycle = options.lat_res;
+            //if(j!=0){
+                grid.triangles.push([curr,curr-1,curr-cycle])
+                grid.triangles.push([curr,curr-1,curr-cycle+1])
+                grid.triangles.push([curr,curr-1,curr-cycle-1])
+
+                grid.triangles.push([curr,curr-cycle+1,curr-cycle-1])
+                grid.triangles.push([curr,curr-cycle,curr-cycle-1])
+                grid.triangles.push([curr,curr-cycle,curr-cycle+1])
+            //}
+            curr++;
+		}
+
+	}
+    //grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
+
+	for (const i in grid.attributes.position) {
+		grid.attributes.color.push([1, 0.373, 0.02, 1]);
+		grid.attributes.is_clif.push([0]);
+		for (let i = 0; i < grid.attributes.position.length; i++) {
+		}
+	}
+
+	return grid;
 }
 
 function genTorus(options) {
