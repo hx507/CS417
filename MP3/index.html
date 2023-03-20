@@ -30,6 +30,13 @@
                             ,"slices":{"type":"number","default":100,"label":"Fractures"}
                         }
                     },
+                    "clif":
+                    {"label":"Optional: Rocky cliffs",
+                        "options":
+                        {"resolution":{"type":"number","default":100,"label":"Grid size"}
+                            ,"slices":{"type":"number","default":100,"label":"Fractures"}
+                        }
+                    },
                     "debug":
                     {"label":"Debug: test (ignore me)",
                         "options":
@@ -47,14 +54,17 @@
 in vec4 position;
 in vec3 normal;
 in vec4 color;
+in float is_clif;
 out vec4 vtx_color;
 out vec3 outnormal;
+out float out_is_clif;
 uniform mat4 p;
 uniform mat4 mv;
 void main() {
     gl_Position = p * mv * position;
     outnormal = normal;
     vtx_color = color;
+    out_is_clif = is_clif;
 }
         </script>
 
@@ -64,13 +74,24 @@ void main() {
             #version 300 es
 precision highp float;
 uniform vec4 color;
+uniform vec3 eyedir;
+uniform int do_clif;
+
 out vec4 fragColor;
 in vec3 outnormal;
 in vec4 vtx_color;
-uniform vec3 eyedir;
+in float out_is_clif;
+
 const vec3 lightdir = vec3(0.9, -0.6, 0.8);
 void main() {
     vec4 used_color = vtx_color;
+
+    if(do_clif!=0)
+        if(out_is_clif>=0.99)
+            used_color = vec4(0.5,0.7,.7,1);
+        else
+            used_color = vec4(0.2,0.7,.2,1);
+
     vec3 normal = normalize(outnormal);
     vec3 x = normal * dot(normal, lightdir);
     vec3 r = 2.0*x - lightdir;

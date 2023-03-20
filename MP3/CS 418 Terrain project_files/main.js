@@ -93,6 +93,7 @@ function draw() {
 
 	gl.bindVertexArray(geom.vao);
 
+	gl.uniform1i(gl.getUniformLocation(program, 'do_clif'), window.do_clif);
 	gl.uniform4fv(gl.getUniformLocation(program, 'color'), IlliniOrange);
 	gl.uniformMatrix4fv(gl.getUniformLocation(program, 'p'), false, p);
 	gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
@@ -186,6 +187,8 @@ async function setup(event) {
  */
 async function setupScene(scene, options) {
 	console.log('To do: render', scene, 'with options', options);
+	window.do_clif = 0; // Reset param
+
 	let data;
 	if (scene == 'debug') {
 		// Const data = await fetch('monkey.json').then(r => r.json());
@@ -194,6 +197,9 @@ async function setupScene(scene, options) {
 		data = genTerrain(options, false);
 	} else if (scene == 'color') {
 		data = genTerrain(options, true);
+	} else if (scene == 'clif') {
+		window.do_clif = 1;
+		data = genTerrain(options, false);
 	}
 
 	console.log(data);
@@ -215,7 +221,7 @@ function genTerrain(options, do_color) {
 	const grid
         = {triangles: [],
         	attributes:
-            {position: [], color: [],
+            {position: [], color: [], is_clif: [],
             },
         };
 	for (let i = 0; i < options.resolution; i++) {
@@ -282,6 +288,26 @@ function genTerrain(options, do_color) {
 		}
 	}
 
+	// Cliff
+	for (const i in grid.attributes.position) {
+		grid.attributes.is_clif.push([0]);
+	}
+
+	for (const i in grid.triangles) {
+		const ps = grid.triangles[i].map(x => grid.attributes.position[x]); // Index of points
+		for (j in ps) {
+			for (k in ps) {
+				const v1 = ps[j];
+				const v2 = ps[k];
+				const slope = Math.abs(v1[2] - v2[2]) / step;
+				if (slope >= 1.5) {
+					grid.attributes.is_clif[grid.triangles[i][j]] = [1];
+					grid.attributes.is_clif[grid.triangles[i][k]] = [1];
+				}
+			}
+		}
+	}
+
 	return grid;
 }
 
@@ -291,7 +317,7 @@ function RainBowColor(length, maxLength) {
 	const r = Math.round(Math.sin(0.024 * i + 0) * 127 + 128);
 	const g = Math.round(Math.sin(0.024 * i + 2) * 127 + 128);
 	const b = Math.round(Math.sin(0.024 * i + 4) * 127 + 128);
-	return [r/255, g/255, b/255, 1];
+	return [r / 255, g / 255, b / 255, 1];
 }
 
 window.addEventListener('load', setup);
