@@ -200,6 +200,8 @@ async function setupScene(scene, options) {
 	} else if (scene == 'clif') {
 		window.do_clif = 1;
 		data = genTerrain(options, false);
+	} else if (scene == 'torus') {
+		data = genTorus(options, false);
 	}
 
 	console.log(data);
@@ -212,6 +214,71 @@ function norm(x, length) {
 	length = length ? Math.min(x.length, length) : x.length;
 	const norm = x.map(x => x * x).reduce((partialSum, a) => partialSum + a, 0);
 	return norm ** (1 / length);
+}
+
+function genTorus(options) {
+	console.log('genTorus!');
+	const grid
+        = {triangles: [],
+        	attributes:
+            {position: [], color: [], is_clif: [],
+            },
+        };
+
+	const minor_radius = options.ring_puf;
+	const major_radius = 0.5;
+
+	let curr = 0;
+	for (let i = 0; i < options.n_ring; i++) {
+		const vtx_base = grid.attributes.position.length;
+
+		const x1 = Math.sin(Math.PI * 2 * (i / options.n_ring)) * major_radius;
+		const y1 = Math.cos(Math.PI * 2 * (i / options.n_ring)) * major_radius;
+
+		const x2 = Math.sin(Math.PI * 2 * ((i + 1) / options.n_ring)) * major_radius;
+		const y2 = Math.cos(Math.PI * 2 * ((i + 1) / options.n_ring)) * major_radius;
+
+		for (let j = 0; j < options.ring_res+3; j++) {
+			const c1 = Math.sin(Math.PI * 2 * ((j) / options.ring_res));
+			const c2 = Math.cos(Math.PI * 2 * ((j) / options.ring_res));
+
+			const vtx1 = [x1 + x1 * (minor_radius + c1)*minor_radius, y1 + y1 * (minor_radius + c1)*minor_radius, c2 * minor_radius*.5];
+			const vtx2 = [x2 + x2 * (minor_radius + c1)*minor_radius, y2 + y2 * (minor_radius + c1)*minor_radius, c2 * minor_radius*.5];
+
+			grid.attributes.position.push(vtx1, vtx2);
+
+			curr += 2;
+
+			if (j != 0) {
+				grid.triangles.push([curr-1, curr -2, curr -3], [curr-3 , curr-2, curr -4]);
+			} else {
+				//grid.triangles.push([curr - 1 + options.ring_res * 2, curr - 2 + options.ring_res * 2, curr - 3 + options.ring_res * 2]);
+			}
+
+		}
+
+		// For (let j = vtx_base; j < grid.attributes.position.length; j++) {
+		// for (let k = vtx_base; k < grid.attributes.position.length; k++) {
+		// for (let l = vtx_base; l < grid.attributes.position.length; l++) {
+		// if (j != k && k != l && l != j) {
+		// grid.triangles.push([j, k, l]);
+		// }
+		// }
+		// }
+		// }
+	}
+
+	for (const i in grid.attributes.position) {
+		grid.attributes.color.push([1, 0.373, 0.02, 1]);
+		grid.attributes.is_clif.push([0]);
+		for (let i = 0; i < grid.attributes.position.length; i++) {
+			// Grid.attributes.position[i][0] /= 2;
+			// grid.attributes.position[i][1] /= 2;
+			// grid.attributes.position[i][2] /= 2;
+		}
+	}
+
+	return grid;
 }
 
 function genTerrain(options, do_color) {
