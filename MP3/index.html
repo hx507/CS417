@@ -15,8 +15,16 @@
              * Nested entries become lower-section inputs of various types.
              */
             var controlOptions =
-                {"terrain":
+                {
+                    "terrain":
                     {"label":"Required: Faulting-method terrain",
+                        "options":
+                        {"resolution":{"type":"number","default":100,"label":"Grid size"}
+                            ,"slices":{"type":"number","default":100,"label":"Fractures"}
+                        }
+                    },
+                    "color":
+                    {"label":"Optional: Height-based color ramp",
                         "options":
                         {"resolution":{"type":"number","default":100,"label":"Grid size"}
                             ,"slices":{"type":"number","default":100,"label":"Fractures"}
@@ -38,12 +46,15 @@
             #version 300 es
 in vec4 position;
 in vec3 normal;
+in vec4 color;
+out vec4 vtx_color;
 out vec3 outnormal;
 uniform mat4 p;
 uniform mat4 mv;
 void main() {
     gl_Position = p * mv * position;
     outnormal = normal;
+    vtx_color = color;
 }
         </script>
 
@@ -55,16 +66,18 @@ precision highp float;
 uniform vec4 color;
 out vec4 fragColor;
 in vec3 outnormal;
+in vec4 vtx_color;
 uniform vec3 eyedir;
 const vec3 lightdir = vec3(0.9, -0.6, 0.8);
 void main() {
+    vec4 used_color = vtx_color;
     vec3 normal = normalize(outnormal);
     vec3 x = normal * dot(normal, lightdir);
     vec3 r = 2.0*x - lightdir;
     float phongbit = max(0.0,dot(r,eyedir));
     float phong = pow(phongbit, 20.0);
     float lambert = max(0.0, dot(lightdir, normal));
-    fragColor = vec4((color.rgb * lambert) + vec3(phong, phong, phong)/300.0, color.a);
+    fragColor = vec4((used_color.rgb * lambert) + vec3(phong, phong, phong)/300.0, used_color.a);
 }
         </script>
 

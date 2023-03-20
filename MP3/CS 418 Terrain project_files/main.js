@@ -171,7 +171,8 @@ async function setup(event) {
 	window.v = m4ident();
 	window.p = m4ident();
 
-	genTerrain({resolution: 100, slices: 100});
+	// GenTerrain({resolution: 100, slices: 100});
+	setupScene('terrain', {resolution: 100, slices: 100});
 	// Const data = await fetch('monkey.json').then(r => r.json());
 	// addNormals(data);
 	// window.geom = setupGeomery(data, program);
@@ -185,14 +186,19 @@ async function setup(event) {
  */
 async function setupScene(scene, options) {
 	console.log('To do: render', scene, 'with options', options);
+	let data;
 	if (scene == 'debug') {
 		// Const data = await fetch('monkey.json').then(r => r.json());
-		const data = await fetch('test.json').then(r => r.json());
-		addNormals(data);
-		window.geom = setupGeomery(data, program);
+		data = await fetch('test.json').then(r => r.json());
 	} else if (scene == 'terrain') {
-		genTerrain(options);
+		data = genTerrain(options, false);
+	} else if (scene == 'color') {
+		data = genTerrain(options, true);
 	}
+
+	console.log(data);
+	addNormals(data);
+	window.geom = setupGeomery(data, program);
 }
 
 /** Helper function to find the difference of (a prefix of) two vectors */
@@ -202,14 +208,14 @@ function norm(x, length) {
 	return norm ** (1 / length);
 }
 
-function genTerrain(options) {
+function genTerrain(options, do_color) {
 	console.log('genTerrain!');
 	const eps = 1e-3;
 	const step = 2 / options.resolution;
 	const grid
         = {triangles: [],
         	attributes:
-            {position: [],
+            {position: [], color: [],
             },
         };
 	for (let i = 0; i < options.resolution; i++) {
@@ -250,10 +256,9 @@ function genTerrain(options) {
 	const zmax = 0;
 	const zmin = -1;
 	const c = 1 / 2;
-	const xmax = Math.max(...grid.attributes.position.map(x => x[2]));
-	const xmin = Math.min(...grid.attributes.position.map(x => x[2]));
+	let xmax = Math.max(...grid.attributes.position.map(x => x[2]));
+	let xmin = Math.min(...grid.attributes.position.map(x => x[2]));
 	const h = (xmax - xmin) * c;
-	console.log(h);
 	if (h != 0) {
 		for (let j = 0; j < grid.attributes.position.length; j++) {
 			const vtx = grid.attributes.position[j];
@@ -263,11 +268,30 @@ function genTerrain(options) {
 		}
 	}
 
-	console.log(grid);
+	// Color map
+	xmax = Math.max(...grid.attributes.position.map(x => x[2]));
+	xmin = Math.min(...grid.attributes.position.map(x => x[2]));
+	for (const i in grid.attributes.position) {
+		let z = grid.attributes.position[i][2];
+		z = (z - xmin) / (xmax - xmin);
+		if (do_color) {
+			// Grid.attributes.color.push([z, 0.5, 0.5, 1]);
+			grid.attributes.color.push(RainBowColor(z, 1));
+		} else {
+			grid.attributes.color.push([1, 0.373, 0.02, 1]);
+		}
+	}
 
-	const data = grid;
-	addNormals(data);
-	window.geom = setupGeomery(data, program);
+	return grid;
+}
+
+// https://stackoverflow.com/questions/5137831/map-a-range-of-values-e-g-0-255-to-a-range-of-colours-e-g-rainbow-red-b
+function RainBowColor(length, maxLength) {
+	const i = (length * 255 / maxLength);
+	const r = Math.round(Math.sin(0.024 * i + 0) * 127 + 128);
+	const g = Math.round(Math.sin(0.024 * i + 2) * 127 + 128);
+	const b = Math.round(Math.sin(0.024 * i + 4) * 127 + 128);
+	return [r/255, g/255, b/255, 1];
 }
 
 window.addEventListener('load', setup);
