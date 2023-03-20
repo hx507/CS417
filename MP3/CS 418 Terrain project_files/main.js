@@ -193,19 +193,22 @@ async function setupScene(scene, options) {
 	if (scene == 'debug') {
 		// Const data = await fetch('monkey.json').then(r => r.json());
 		data = await fetch('test.json').then(r => r.json());
+	addNormals(data);
 	} else if (scene == 'terrain') {
 		data = genTerrain(options, false);
+	addNormals(data);
 	} else if (scene == 'color') {
 		data = genTerrain(options, true);
+	addNormals(data);
 	} else if (scene == 'clif') {
 		window.do_clif = 1;
 		data = genTerrain(options, false);
+	addNormals(data);
 	} else if (scene == 'torus') {
 		data = genTorus(options, false);
 	}
 
 	console.log(data);
-	addNormals(data);
 	window.geom = setupGeomery(data, program);
 }
 
@@ -221,7 +224,7 @@ function genTorus(options) {
 	const grid
         = {triangles: [],
         	attributes:
-            {position: [], color: [], is_clif: [],
+            {position: [], color: [], is_clif: [],normal:[]
             },
         };
 
@@ -230,51 +233,58 @@ function genTorus(options) {
 
 	let curr = 0;
 	for (let i = 0; i < options.n_ring; i++) {
+        const u1 = (Math.PI * 2 * (i / options.n_ring));
+        const u2 = (Math.PI * 2 * ((i+1) / options.n_ring));
 		const vtx_base = grid.attributes.position.length;
 
-		const x1 = Math.sin(Math.PI * 2 * (i / options.n_ring)) * major_radius;
-		const y1 = Math.cos(Math.PI * 2 * (i / options.n_ring)) * major_radius;
+		const x1 = Math.sin(u1) * major_radius;
+		const y1 = Math.cos(u1) * major_radius;
 
-		const x2 = Math.sin(Math.PI * 2 * ((i + 1) / options.n_ring)) * major_radius;
-		const y2 = Math.cos(Math.PI * 2 * ((i + 1) / options.n_ring)) * major_radius;
+		const x2 = Math.sin(u2) * major_radius;
+		const y2 = Math.cos(u2) * major_radius;
 
-		for (let j = 0; j < options.ring_res+3; j++) {
-			const c1 = Math.sin(Math.PI * 2 * ((j) / options.ring_res));
-			const c2 = Math.cos(Math.PI * 2 * ((j) / options.ring_res));
+		for (let j = 0; j < options.ring_res+1; j++) {
+            const v = (Math.PI * 2 * ((j) / options.ring_res));
+			const c2 = Math.sin(v);
+			const c1 = Math.cos(v);
 
-			const vtx1 = [x1 + x1 * (minor_radius + c1)*minor_radius, y1 + y1 * (minor_radius + c1)*minor_radius, c2 * minor_radius*.5];
-			const vtx2 = [x2 + x2 * (minor_radius + c1)*minor_radius, y2 + y2 * (minor_radius + c1)*minor_radius, c2 * minor_radius*.5];
+			const vtx1 = [x1 + x1 * (minor_radius + c1) * minor_radius, y1 + y1 * (minor_radius + c1) * minor_radius, c2 * minor_radius * 0.5];
+			const vtx2 = [x2 + x2 * (minor_radius + c1) * minor_radius, y2 + y2 * (minor_radius + c1) * minor_radius, c2 * minor_radius * 0.5];
 
 			grid.attributes.position.push(vtx1, vtx2);
+
+            let f = 1;
+            //let normal1 = [
+                //f*(major_radius+minor_radius*Math.cos(u1))*Math.cos(v),
+                //f*(major_radius+minor_radius*Math.cos(u1))*Math.sin(v),
+                //f*minor_radius*Math.sin(u1)
+            //]
+            //let normal2 = [
+               //f* (major_radius+minor_radius*Math.cos(u2))*Math.cos(v),
+               //f* (major_radius+minor_radius*Math.cos(u2))*Math.sin(v),
+               //f* minor_radius*Math.sin(u2)
+            //]
+            let calc = (v,u) => [Math.cos(u)*Math.cos(v),Math.sin(u)*Math.cos(v),Math.sin(v)];
+            let normal1 = calc(u1,v);
+            let normal2 = calc(u2,v);
+
+			grid.attributes.normal.push(normal1, normal2);
 
 			curr += 2;
 
 			if (j != 0) {
-				grid.triangles.push([curr-1, curr -2, curr -3], [curr-3 , curr-2, curr -4]);
-			} else {
-				//grid.triangles.push([curr - 1 + options.ring_res * 2, curr - 2 + options.ring_res * 2, curr - 3 + options.ring_res * 2]);
+				grid.triangles.push([curr - 1, curr - 2, curr - 3], [curr - 3, curr - 2, curr - 4]);
 			}
-
 		}
-
-		// For (let j = vtx_base; j < grid.attributes.position.length; j++) {
-		// for (let k = vtx_base; k < grid.attributes.position.length; k++) {
-		// for (let l = vtx_base; l < grid.attributes.position.length; l++) {
-		// if (j != k && k != l && l != j) {
-		// grid.triangles.push([j, k, l]);
-		// }
-		// }
-		// }
-		// }
 	}
+    //grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
+    console.log(grid.attributes.normal)
+    console.log(grid.attributes.position)
 
 	for (const i in grid.attributes.position) {
 		grid.attributes.color.push([1, 0.373, 0.02, 1]);
 		grid.attributes.is_clif.push([0]);
 		for (let i = 0; i < grid.attributes.position.length; i++) {
-			// Grid.attributes.position[i][0] /= 2;
-			// grid.attributes.position[i][1] /= 2;
-			// grid.attributes.position[i][2] /= 2;
 		}
 	}
 
