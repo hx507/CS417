@@ -23,7 +23,7 @@
                         }
                     },
                     "debug":
-                    {"label":"Debug: test",
+                    {"label":"Debug: test (ignore me)",
                         "options":
                         {"resolution":{"type":"number","default":100,"label":"Grid size"}
                             ,"slices":{"type":"number","default":100,"label":"Fractures"}
@@ -56,7 +56,7 @@ uniform vec4 color;
 out vec4 fragColor;
 in vec3 outnormal;
 uniform vec3 eyedir;
-const vec3 lightdir = vec3(0.8, -0.6, 0);
+const vec3 lightdir = vec3(0.9, -0.6, 0.8);
 void main() {
     vec3 normal = normalize(outnormal);
     vec3 x = normal * dot(normal, lightdir);
@@ -64,7 +64,7 @@ void main() {
     float phongbit = max(0.0,dot(r,eyedir));
     float phong = pow(phongbit, 20.0);
     float lambert = max(0.0, dot(lightdir, normal));
-    fragColor = vec4((color.rgb * lambert) + vec3(phong, phong, phong)/3.0, color.a);
+    fragColor = vec4((color.rgb * lambert) + vec3(phong, phong, phong)/300.0, color.a);
 }
         </script>
 
