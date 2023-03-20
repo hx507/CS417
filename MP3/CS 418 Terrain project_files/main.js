@@ -210,7 +210,6 @@ async function setupScene(scene, options) {
 		data = genSphere(options);
 	}
 
-	console.log(data);
 	window.geom = setupGeomery(data, program);
 }
 
@@ -243,7 +242,6 @@ function genSphere(options) {
             const v = (Math.PI *  2*(i / (options.lat_res+1)));
             vtx = coord(u,v);
             n = normal(u,v);
-            console.log(vtx)
             grid.attributes.position.push(vtx);
             grid.attributes.normal.push(n);
 
@@ -318,8 +316,6 @@ function genTorus(options) {
         base+=options.ring_res;
 	}
     //grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
-    console.log(grid.attributes.normal)
-    console.log(grid.attributes.position)
 
 	for (const i in grid.attributes.position) {
 		grid.attributes.color.push([1, 0.373, 0.02, 1]);

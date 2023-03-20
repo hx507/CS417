@@ -1,0 +1,4 @@
+Height-based color ramp
+Rocky cliffs
+UV-sphere
+Torus
