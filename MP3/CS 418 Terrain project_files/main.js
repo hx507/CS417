@@ -29,9 +29,11 @@ function addNormals(data) {
 
 	for ([i0, i1, i2] of data.triangles) {
 		// Find the vertex positions
+
 		const p0 = data.attributes.position[i0];
 		const p1 = data.attributes.position[i1];
 		const p2 = data.attributes.position[i2];
+
 		// Find the edge vectors and normal
 		const e0 = m4sub_(p0, p2);
 		const e1 = m4sub_(p1, p2);
@@ -193,8 +195,16 @@ async function setupScene(scene, options) {
 	}
 }
 
+/** Helper function to find the difference of (a prefix of) two vectors */
+function norm(x, length) {
+	length = length ? Math.min(x.length, length) : x.length;
+	const norm = x.map(x => x * x).reduce((partialSum, a) => partialSum + a, 0);
+	return norm ** (1 / length);
+}
+
 function genTerrain(options) {
 	console.log('genTerrain!');
+	const eps = 1e-3;
 	const step = 2 / options.resolution;
 	const grid
         = {triangles: [],
@@ -202,15 +212,24 @@ function genTerrain(options) {
             {position: [],
             },
         };
-	let k = 0;
 	for (let i = 0; i < options.resolution; i++) {
 		for (let j = 0; j < options.resolution; j++) {
 			const x = -1 + i * step;
 			const y = -1 + j * step;
-			grid.attributes.position.push([x, y, 0], [x + step, y, 0], [x, y + step, 0], [x + step, y + step, 0]);
-			grid.triangles.push([k, k + 1, k + 2], [k + 3, k + 1, k + 2]);
+					grid.attributes.position.push([x,y,0]);
 
-			k += 4;
+			const ps = [[x, y, 0], [x + step, y, 0], [x, y + step, 0], [x + step, y + step, 0]];
+			for (const i in ps) {
+				const p = ps[i];
+				if (grid.attributes.position.findIndex(pp => norm(m4sub_(pp, p)) <= eps) == -1) {
+					grid.attributes.position.push(p);
+				} else {
+					console.log('reuse!');
+				}
+			}
+
+			const ks = ps.map(p => grid.attributes.position.findIndex(pp => norm(m4sub_(pp, p)) <= eps));
+			grid.triangles.push([ks[0], ks[1], ks[2]], [ks[3], ks[2], ks[1]]);
 		}
 	}
 
