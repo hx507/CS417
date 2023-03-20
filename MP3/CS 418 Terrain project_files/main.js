@@ -169,9 +169,10 @@ async function setup(event) {
 	window.v = m4ident();
 	window.p = m4ident();
 
-	const data = await fetch('monkey.json').then(r => r.json());
-	addNormals(data);
-	window.geom = setupGeomery(data, program);
+	genTerrain({resolution: 100, slices: 100});
+	// Const data = await fetch('monkey.json').then(r => r.json());
+	// addNormals(data);
+	// window.geom = setupGeomery(data, program);
 
 	requestAnimationFrame(timeStep);
 	fillScreen();
@@ -182,6 +183,58 @@ async function setup(event) {
  */
 async function setupScene(scene, options) {
 	console.log('To do: render', scene, 'with options', options);
+	if (scene == 'debug') {
+		// Const data = await fetch('monkey.json').then(r => r.json());
+		const data = await fetch('test.json').then(r => r.json());
+		addNormals(data);
+		window.geom = setupGeomery(data, program);
+	} else if (scene == 'terrain') {
+		genTerrain(options);
+	}
+}
+
+function genTerrain(options) {
+	console.log('genTerrain!');
+	const step = 2 / options.resolution;
+	const grid
+        = {triangles: [],
+        	attributes:
+            {position: [],
+            },
+        };
+	let k = 0;
+	for (let i = 0; i < options.resolution; i++) {
+		for (let j = 0; j < options.resolution; j++) {
+			const x = -1 + i * step;
+			const y = -1 + j * step;
+			grid.attributes.position.push([x, y, 0], [x + step, y, 0], [x, y + step, 0], [x + step, y + step, 0]);
+			grid.triangles.push([k, k + 1, k + 2], [k + 3, k + 1, k + 2]);
+
+			k += 4;
+		}
+	}
+
+	// Do cuts:
+	for (let i = 0; i < options.slices; i++) {
+		const p = [Math.random() * 2 - 1, Math.random() * 2 - 1, 0];
+		const cut2 = [Math.random() * 2 - 1, Math.random() * 2 - 1, 0];
+
+		const dir = m4normalized_(m4sub_(p, cut2));
+		for (let j = 0; j < grid.attributes.position.length; j++) {
+			const vtx = grid.attributes.position[j];
+			const va = m4sub_(vtx, p);
+			const det = m4dot_(va, dir);
+			vtx[2] += det >= 0 ? 1 / options.slices : -1 / options.slices;
+
+			grid.attributes.position[j] = vtx;
+		}
+	}
+
+	console.log(grid);
+
+	const data = grid;
+	addNormals(data);
+	window.geom = setupGeomery(data, program);
 }
 
 window.addEventListener('load', setup);
