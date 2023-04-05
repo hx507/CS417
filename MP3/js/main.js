@@ -255,6 +255,8 @@ function genSphere(options) {
 			curr++;
 		}
 	}
+    console.log("sphere budget: ", (options.long_res+1)*(options.lat_res+1))
+    console.log("sphere actual: ", grid.attributes.position.length)
 	// Grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
 	// Parametric formula is already normalized, no need to do it again
 
@@ -317,6 +319,8 @@ function genTorus(options) {
 		grid.attributes.is_clif.push([0]);
 		for (let i = 0; i < grid.attributes.position.length; i++) {}
 	}
+    console.log("torus budget: ", (options.n_ring+1)*(options.ring_res+1))
+    console.log("torus actual: ", grid.attributes.position.length)
 
 	return grid;
 }
