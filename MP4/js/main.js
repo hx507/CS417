@@ -16,7 +16,7 @@ function fillScreen() {
 	window.p = m4perspNegZ(1, 9, 0.7, canvas.width, canvas.height);
 	if (window.gl) {
 		gl.viewport(0, 0, canvas.width, canvas.height);
-		window.p = m4perspNegZ(1, 9, 0.7, gl.canvas.width, gl.canvas.height);
+		window.p = m4perspNegZ(0.1, 9, 1.5, gl.canvas.width, gl.canvas.height);
 		draw();
 	}
 }
@@ -150,36 +150,65 @@ function setupGeomery(geom, program) {
 function timeStep(milliseconds) {
 	const seconds = milliseconds / 1000;
 	const s2 = Math.cos(seconds / 2) - 1;
-    const dt = 0.05;
+	const dt = 0.02;
 
-	//const eye = [3 * Math.cos(s2), 3 * Math.sin(s2), 1];
-    if(!window.eye){
-        window.eye = [1,1,1]
-        //window.view_dir = 
-    }
+	if (!window.eye) {
+		window.eye = [0, 1, 0, 1];
+		window.forward_dir = [0, -1, 0, 1];
+		window.side_dir = [1, 0, 0, 1]; // Left side
+		window.up_dir = [0, 0, 1, 1];
+	}
 
-    const center = eye
-	window.v = m4view(eye, [0, 0, 0], [0, 0, 1]); // eye, center, up
-	gl.uniform3fv(gl.getUniformLocation(program, 'eyedir'), new Float32Array(m4normalized_(eye)));
+	const center = m4add_(eye, forward_dir);
+	window.v = m4view(eye, center, up_dir); // Eye, center, up
+	gl.uniform3fv(gl.getUniformLocation(program, 'eyedir'), new Float32Array(m4normalized_(eye.slice(0,-1))));
 
-    if (keysBeingPressed['1'])
-        window.eye[0]+=dt
-    if (keysBeingPressed['2'])
-        window.eye[1]+=dt
-    if (keysBeingPressed['3'])
-        window.eye[2]+=dt
-    if (keysBeingPressed['W']){
-    }
-    if (keysBeingPressed['S']){
-    }
-    if (keysBeingPressed['A']){
-    }
-    if (keysBeingPressed['D']){
-    }
+	if (keysBeingPressed.W || keysBeingPressed.w) {
+		window.eye = m4add_(eye, m4scale_(forward_dir, dt));
+		console.log('press w');
+	}
+
+	if (keysBeingPressed.S || keysBeingPressed.s) {
+		window.eye = m4add_(eye, m4scale_(forward_dir, -dt));
+	}
+
+	if (keysBeingPressed.A || keysBeingPressed.a) {
+		window.eye = m4add_(eye, m4scale_(side_dir, dt));
+	}
+
+	if (keysBeingPressed.D || keysBeingPressed.d) {
+		window.eye = m4add_(eye, m4scale_(side_dir, -dt));
+	}
+
+	// Rotation
+	if (keysBeingPressed.ArrowUp || keysBeingPressed.ArrowDown || keysBeingPressed.ArrowRight || keysBeingPressed.ArrowLeft) {
+		let rot = m4rotX(0);
+		if (keysBeingPressed.ArrowUp) {
+			rot = m4rotAtoB(forward_dir, m4add_(forward_dir, m4scale_(up_dir, dt)));
+		}
+
+		if (keysBeingPressed.ArrowDown) {
+			rot = m4rotAtoB(forward_dir, m4add_(forward_dir, m4scale_(up_dir, -dt)));
+		}
+
+		if (keysBeingPressed.ArrowLeft) {
+			rot = m4rotAtoB(forward_dir, m4add_(forward_dir, m4scale_(side_dir, dt)));
+		}
+
+		if (keysBeingPressed.ArrowRight) {
+			rot = m4rotAtoB(forward_dir, m4add_(forward_dir, m4scale_(side_dir, -dt)));
+		}
+
+		window.forward_dir = m4multvec_(rot, forward_dir);
+		window.side_dir = m4mult(rot, side_dir);
+		window.up_dir = m4mult(rot, up_dir);
+	}
 
 	draw();
 	requestAnimationFrame(timeStep);
 }
+
+window.once = false;
 
 /**
  * Compile, link, set up geometry
@@ -222,7 +251,8 @@ async function setupScene(scene, options) {
 	} else if (scene == 'terrain') {
 		data = genTerrain(options, false);
 		addNormals(data);
-	} 
+	}
+
 	window.geom = setupGeomery(data, program);
 }
 
@@ -232,7 +262,6 @@ function norm(x, length) {
 	const norm = x.map(x => x * x).reduce((partialSum, a) => partialSum + a, 0);
 	return norm ** (1 / length);
 }
-
 
 /* Generate a terrain geometry. If do_color, also generate the accommodating color map as colored vertex data */
 function genTerrain(options, do_color) {
@@ -274,7 +303,7 @@ function genTerrain(options, do_color) {
 			const det = m4dot_(m4sub_(vtx, p), dir);
 
 			let delta = max_height / options.slices;
-            delta *= 0.99**i
+			delta *= 0.995 ** i;
 			vtx[2] += det >= 0 ? delta : -delta;
 
 			grid.attributes.position[j] = vtx;
@@ -348,6 +377,6 @@ window.addEventListener('load', setup);
 window.addEventListener('resize', fillScreen);
 
 // Add key listeners for keyboard control
-window.keysBeingPressed = {}
-window.addEventListener('keydown', event => keysBeingPressed[event.key] = true)
-window.addEventListener('keyup', event => keysBeingPressed[event.key] = false)
+window.keysBeingPressed = {};
+window.addEventListener('keydown', event => keysBeingPressed[event.key] = true);
+window.addEventListener('keyup', event => keysBeingPressed[event.key] = false);

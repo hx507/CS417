@@ -30,6 +30,11 @@
  */
 
 /** Helper function to normalize a (prefix of a) vector */
+function m4scale_(vec, scale, len) {
+    vec = Array.from(vec)
+    if (len && len < vec.length) vec = vec.slice(0,len)
+    return vec.map(x=>x*scale)
+}
 function m4normalized_(vec, len) {
     vec = Array.from(vec)
     if (len && len < vec.length) vec = vec.slice(0,len)
@@ -57,6 +62,10 @@ function m4sub_(x,y,len) {
     len = len ? Math.min(x.length, y.length, len) : Math.min(x.length, y.length)
     return Array.from(x).slice(0,len).map((v,i)=>v-y[i])
 }
+function m4add_(x,y,len) {
+    len = len ? Math.min(x.length, y.length, len) : Math.min(x.length, y.length)
+    return Array.from(x).slice(0,len).map((v,i)=>v+y[i])
+}
 
 /**
  * Multiply two matrices. Helper function; generally call m4mult instead.
@@ -69,6 +78,17 @@ function m4mult_(m1,m2) {
                 ans[outRow+outCol*4] += m1[outRow+i*4] * m2[i+outCol*4]
             }
         }
+    }
+    return ans
+}
+
+function m4multvec_(m1,v) {
+    let ans = new Float32Array(4)
+    for(let outRow = 0; outRow < 4; outRow += 1) {
+            ans[outRow] = 0
+            for(let i = 0; i < 4; i += 1) {
+                ans[outRow] += m1[outRow+i*4] * v[i]
+            }
     }
     return ans
 }

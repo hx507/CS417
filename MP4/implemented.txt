@@ -1,4 +1,1 @@
-Height-based color ramp
-Rocky cliffs
-UV-sphere
-Torus
+Rotating camera (20 points)
