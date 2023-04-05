@@ -96,6 +96,7 @@ function draw() {
 
 	gl.bindVertexArray(geom.vao);
 
+	gl.uniform1i(gl.getUniformLocation(program, 'texture'), gl.TEXTURE0);
 	gl.uniform1i(gl.getUniformLocation(program, 'do_clif'), window.do_clif);
 	gl.uniform4fv(gl.getUniformLocation(program, 'color'), IlliniOrange);
 	gl.uniformMatrix4fv(gl.getUniformLocation(program, 'p'), false, p);
@@ -161,7 +162,7 @@ function timeStep(milliseconds) {
 
 	const center = m4add_(eye, forward_dir);
 	window.v = m4view(eye, center, up_dir); // Eye, center, up
-	gl.uniform3fv(gl.getUniformLocation(program, 'eyedir'), new Float32Array(m4normalized_(eye.slice(0,-1))));
+	gl.uniform3fv(gl.getUniformLocation(program, 'eyedir'), new Float32Array(m4normalized_(eye.slice(0, -1))));
 
 	if (keysBeingPressed.W || keysBeingPressed.w) {
 		window.eye = m4add_(eye, m4scale_(forward_dir, dt));
@@ -226,11 +227,31 @@ async function setup(event) {
 	window.v = m4ident();
 	window.p = m4ident();
 
-	// GenTerrain({resolution: 100, slices: 100});
 	setupScene('terrain', {resolution: 100, slices: 100});
-	// Const data = await fetch('monkey.json').then(r => r.json());
-	// addNormals(data);
-	// window.geom = setupGeomery(data, program);
+
+	// Load the texture image
+	const img = new Image();
+	img.crossOrigin = 'anonymous';
+	img.src = './farm.jpg';
+	img.addEventListener('load', event => {
+		console.log('img loaded', event);
+		// Create the texture
+		const texture = gl.createTexture();
+		gl.activeTexture(gl.TEXTURE0 + 0);
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+		gl.texImage2D(
+			gl.TEXTURE_2D, // Destination slot
+			0, // The mipmap level this data provides; almost always 0
+			gl.RGBA, // How to store it in graphics memory
+			gl.RGBA, // How it is stored in the image object
+			gl.UNSIGNED_BYTE, // Size of a single pixel-color in HTML
+			img, // Source data
+		);
+		gl.generateMipmap(gl.TEXTURE_2D); // Lets you use a mipmapping min filter
+	});
 
 	requestAnimationFrame(timeStep);
 	fillScreen();
@@ -271,7 +292,7 @@ function genTerrain(options, do_color) {
 	const grid
         = {triangles: [],
         	attributes:
-            {position: [], color: [], is_clif: [],
+            {position: [], color: [], is_clif: [], tex_coord: [],
             },
         };
 	// Generate grid:
@@ -280,6 +301,7 @@ function genTerrain(options, do_color) {
 			const x = -1 + i * step;
 			const y = -1 + j * step;
 		    grid.attributes.position.push([x, y, 0]);
+		    grid.attributes.tex_coord.push([x / options.resolution, y / options.resolution]);
 		}
 	}
 
