@@ -97,8 +97,8 @@ function draw() {
 	gl.bindVertexArray(geom.vao);
 
 	gl.uniform1i(gl.getUniformLocation(program, 'texture'), gl.TEXTURE0);
-	gl.uniform1i(gl.getUniformLocation(program, 'do_clif'), window.do_clif);
-	gl.uniform4fv(gl.getUniformLocation(program, 'color'), IlliniOrange);
+	gl.uniform1i(gl.getUniformLocation(program, 'do_fog'), window.do_fog);
+	gl.uniform4fv(gl.getUniformLocation(program, 'bg_color'), IlliniBlue);
 	gl.uniformMatrix4fv(gl.getUniformLocation(program, 'p'), false, p);
 	gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
 	gl.drawElements(geom.mode, geom.count, geom.type, 0);
@@ -205,8 +205,17 @@ function timeStep(milliseconds) {
 		window.up_dir = m4mult(rot, up_dir);
 	}
 
+
 	draw();
 	requestAnimationFrame(timeStep);
+}
+
+function keyDown(key){
+    // Fog
+	if (keysBeingPressed.F || keysBeingPressed.f) {
+        window.do_fog = !window.do_fog;
+    }
+
 }
 
 window.once = false;
@@ -262,7 +271,7 @@ async function setup(event) {
  */
 async function setupScene(scene, options) {
 	console.log('To do: render', scene, 'with options', options);
-	window.do_clif = 0; // Reset param
+	window.do_fog = 0; // Reset param
 
 	let data;
 	if (scene == 'debug') {
@@ -400,5 +409,5 @@ window.addEventListener('resize', fillScreen);
 
 // Add key listeners for keyboard control
 window.keysBeingPressed = {};
-window.addEventListener('keydown', event => keysBeingPressed[event.key] = true);
+window.addEventListener('keydown', event => { keysBeingPressed[event.key] = true;keyDown(event.key);});
 window.addEventListener('keyup', event => keysBeingPressed[event.key] = false);

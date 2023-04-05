@@ -1,1 +1,2 @@
 Rotating camera (20 points)
+Fog (15 points)
