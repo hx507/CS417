@@ -150,10 +150,32 @@ function setupGeomery(geom, program) {
 function timeStep(milliseconds) {
 	const seconds = milliseconds / 1000;
 	const s2 = Math.cos(seconds / 2) - 1;
+    const dt = 0.05;
 
-	const eye = [3 * Math.cos(s2), 3 * Math.sin(s2), 1];
-	window.v = m4view([3 * Math.cos(s2), 3 * Math.sin(s2), 1], [0, 0, 0], [0, 0, 1]);
+	//const eye = [3 * Math.cos(s2), 3 * Math.sin(s2), 1];
+    if(!window.eye){
+        window.eye = [1,1,1]
+        //window.view_dir = 
+    }
+
+    const center = eye
+	window.v = m4view(eye, [0, 0, 0], [0, 0, 1]); // eye, center, up
 	gl.uniform3fv(gl.getUniformLocation(program, 'eyedir'), new Float32Array(m4normalized_(eye)));
+
+    if (keysBeingPressed['1'])
+        window.eye[0]+=dt
+    if (keysBeingPressed['2'])
+        window.eye[1]+=dt
+    if (keysBeingPressed['3'])
+        window.eye[2]+=dt
+    if (keysBeingPressed['W']){
+    }
+    if (keysBeingPressed['S']){
+    }
+    if (keysBeingPressed['A']){
+    }
+    if (keysBeingPressed['D']){
+    }
 
 	draw();
 	requestAnimationFrame(timeStep);
@@ -200,19 +222,7 @@ async function setupScene(scene, options) {
 	} else if (scene == 'terrain') {
 		data = genTerrain(options, false);
 		addNormals(data);
-	} else if (scene == 'color') {
-		data = genTerrain(options, true);
-		addNormals(data);
-	} else if (scene == 'clif') {
-		window.do_clif = 1;
-		data = genTerrain(options, false);
-		addNormals(data);
-	} else if (scene == 'torus') {
-		data = genTorus(options);
-	} else if (scene == 'sphere') {
-		data = genSphere(options);
-	}
-
+	} 
 	window.geom = setupGeomery(data, program);
 }
 
@@ -223,103 +233,6 @@ function norm(x, length) {
 	return norm ** (1 / length);
 }
 
-/* Generate a sphere geometry */
-function genSphere(options) {
-	console.log('genTorus!');
-	const grid
-        = {triangles: [],
-        	attributes:
-            {position: [], color: [], is_clif: [], normal: [],
-            },
-        };
-
-	const r = 0.5; // Control the radius of the sphere here
-	const coord = (u, v) => [Math.cos(u) * Math.sin(v) * r, Math.sin(u) * Math.sin(v) * r, Math.cos(v) * r];
-	const normal = (u, v) => [Math.cos(u) * Math.sin(v) * r, Math.sin(u) * Math.sin(v) * r, Math.cos(v) * r];
-	// Parametric formulas for sphere
-
-	let curr = 0;
-
-	for (let j = 0; j < options.long_res; j++) {
-		const u = (Math.PI * 2 * ((j) / options.long_res));
-
-		for (let i = 0; i < options.lat_res + 1; i++) {
-			const v = (Math.PI * 2 * (i / (options.lat_res + 1)));
-			vtx = coord(u, v);
-			n = normal(u, v);
-			grid.attributes.position.push(vtx);
-			grid.attributes.normal.push(n);
-
-			const cycle = options.lat_res;
-			grid.triangles.push([curr, curr - 1, curr - cycle], [curr, curr - 1, curr - cycle + 1], [curr, curr - 1, curr - cycle - 1], [curr, curr - cycle + 1, curr - cycle - 1], [curr, curr - cycle, curr - cycle - 1], [curr, curr - cycle, curr - cycle + 1]);
-			curr++;
-		}
-	}
-	// Grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
-	// Parametric formula is already normalized, no need to do it again
-
-	for (const i in grid.attributes.position) {
-		grid.attributes.color.push([1, 0.373, 0.02, 1]);
-		grid.attributes.is_clif.push([0]);
-		for (let i = 0; i < grid.attributes.position.length; i++) {}
-	}
-
-	return grid;
-}
-
-/* Generate a torus geometry */
-function genTorus(options) {
-	console.log('genTorus!');
-	const grid
-        = {triangles: [],
-        	attributes:
-            {position: [], color: [], is_clif: [], normal: [],
-            },
-        };
-
-	const minor_radius = options.ring_puf;
-	const major_radius = 0.5;
-	const coord = (u, v) => [
-		(major_radius + minor_radius * Math.cos(u)) * Math.cos(v),
-		(major_radius + minor_radius * Math.cos(u)) * Math.sin(v),
-		minor_radius * Math.sin(u),
-	];
-	const normal = (u, v) => [Math.cos(u) * Math.cos(v), Math.sin(u) * Math.cos(v), Math.sin(v)];
-
-	let curr = 0;
-	for (let i = 0; i < options.n_ring + 2; i++) {
-		const v = (Math.PI * 2 * (i / options.n_ring));
-
-		let base = 0;
-		for (let j = 0; j < options.ring_res; j++) {
-			const u = (Math.PI * 2 * ((j) / options.ring_res));
-
-			vtx = coord(u, v);
-			n = normal(v, u);
-			grid.attributes.position.push(vtx);
-			grid.attributes.normal.push(n);
-			if (i != 0) {
-				grid.triangles.push([curr, curr - 1, curr - options.ring_res], [curr, curr - options.ring_res + 1, curr - options.ring_res]);
-			}
-
-			curr++;
-		}
-
-		if (i != 0) {
-			base += options.ring_res;
-		}
-	}
-	// Grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
-	// Parametric formula is already normalized, no need to do it again
-
-	for (const i in grid.attributes.position) {
-		grid.attributes.color.push([1, 0.373, 0.02, 1]);
-		grid.attributes.is_clif.push([0]);
-		for (let i = 0; i < grid.attributes.position.length; i++) {}
-	}
-
-	return grid;
-}
 
 /* Generate a terrain geometry. If do_color, also generate the accommodating color map as colored vertex data */
 function genTerrain(options, do_color) {
@@ -433,3 +346,8 @@ function RainBowColor(length, maxLength) {
 
 window.addEventListener('load', setup);
 window.addEventListener('resize', fillScreen);
+
+// Add key listeners for keyboard control
+window.keysBeingPressed = {}
+window.addEventListener('keydown', event => keysBeingPressed[event.key] = true)
+window.addEventListener('keyup', event => keysBeingPressed[event.key] = false)

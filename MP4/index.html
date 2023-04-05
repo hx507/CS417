@@ -3,8 +3,8 @@
         <meta http-equiv="content-type" content="text/html; charset=UTF-8">
         <meta charset="utf-8">
         <title>CS 418 Terrain project</title>
-        <script src="CS_418_Terrain_project_files/scene-option-tree.js"></script><!-- handles controls -->
-        <script src="CS_418_Terrain_project_files/matrices.js"></script><!-- handles controls -->
+        <script src="js/scene-option-tree.js"></script><!-- handles controls -->
+        <script src="js/matrices.js"></script><!-- handles controls -->
 
 
 
@@ -18,42 +18,6 @@
                 {
                     "terrain":
                     {"label":"Required: Faulting-method terrain",
-                        "options":
-                        {"resolution":{"type":"number","default":100,"label":"Grid size"}
-                            ,"slices":{"type":"number","default":100,"label":"Fractures"}
-                        }
-                    },
-                    "color":
-                    {"label":"Optional: Height-based color ramp",
-                        "options":
-                        {"resolution":{"type":"number","default":100,"label":"Grid size"}
-                            ,"slices":{"type":"number","default":100,"label":"Fractures"}
-                        }
-                    },
-                    "clif":
-                    {"label":"Optional: Rocky cliffs",
-                        "options":
-                        {"resolution":{"type":"number","default":100,"label":"Grid size"}
-                            ,"slices":{"type":"number","default":100,"label":"Fractures"}
-                        }
-                    },
-                    "sphere":
-                    {"label":"Optional: Sphere",
-                        "options":
-                        {"lat_res":{"type":"number","default":30,"label":"Number of latitude rings"}
-                        ,"long_res":{"type":"number","default":40,"label":"Number of longtitude rings"}
-                        }
-                    },
-                    "torus":
-                    {"label":"Optional: Torus",
-                        "options":
-                        {"n_ring":{"type":"number","default":40,"label":"Number of rings"}
-                            ,"ring_res":{"type":"number","default":30,"label":"Points per Ring"}
-                            ,"ring_puf":{"type":"number","default":0.2,"label":"Ring puffiness (0.1-0.5)"}
-                        }
-                    },
-                    "debug":
-                    {"label":"Debug: test (ignore me)",
                         "options":
                         {"resolution":{"type":"number","default":100,"label":"Grid size"}
                             ,"slices":{"type":"number","default":100,"label":"Fractures"}
@@ -153,7 +117,7 @@ void main() {
         </script>
 
 
-        <script src="CS_418_Terrain_project_files/main.js"></script><!-- Main utils -->
+        <script src="js/main.js"></script><!-- Main utils -->
 
         <!-- DO NOT MODIFY anything below this line -->
         <style>
