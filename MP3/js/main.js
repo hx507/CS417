@@ -361,7 +361,7 @@ function genTerrain(options, do_color) {
 			const det = m4dot_(m4sub_(vtx, p), dir);
 
 			let delta = max_height / options.slices;
-            delta *= 0.99**i
+            delta *= 0.995**i
 			vtx[2] += det >= 0 ? delta : -delta;
 
 			grid.attributes.position[j] = vtx;
