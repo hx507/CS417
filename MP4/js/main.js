@@ -16,7 +16,7 @@ function fillScreen() {
 	window.p = m4perspNegZ(1, 9, 0.7, canvas.width, canvas.height);
 	if (window.gl) {
 		gl.viewport(0, 0, canvas.width, canvas.height);
-		window.p = m4perspNegZ(0.1, 9, 1.5, gl.canvas.width, gl.canvas.height);
+		window.p = m4perspNegZ(0.1, 900, 1.5, gl.canvas.width, gl.canvas.height);
 		draw();
 	}
 }
@@ -154,7 +154,7 @@ function timeStep(milliseconds) {
 	const dt = 0.02;
 
 	if (!window.eye) {
-		window.eye = [0, 1, 0, 1];
+		window.eye = [5, 8, -0, 1];  // TODO: interpolate correct height
 		window.forward_dir = [0, -1, 0, 1];
 		window.side_dir = [1, 0, 0, 1]; // Left side
 		window.up_dir = [0, 0, 1, 1];
@@ -215,10 +215,12 @@ function keyDown(key){
 	if (keysBeingPressed.F || keysBeingPressed.f) {
         window.do_fog = !window.do_fog;
     }
+    // Ground mode
+	if (keysBeingPressed.G || keysBeingPressed.g) {
+        window.do_ground = !window.do_ground;
+    }
 
 }
-
-window.once = false;
 
 /**
  * Compile, link, set up geometry
@@ -272,6 +274,7 @@ async function setup(event) {
 async function setupScene(scene, options) {
 	console.log('To do: render', scene, 'with options', options);
 	window.do_fog = 0; // Reset param
+	window.do_ground = 0;
 
 	let data;
 	if (scene == 'debug') {
@@ -296,21 +299,23 @@ function norm(x, length) {
 /* Generate a terrain geometry. If do_color, also generate the accommodating color map as colored vertex data */
 function genTerrain(options, do_color) {
 	console.log('genTerrain!');
-	const eps = 1e-3;
-	const step = 2 / options.resolution;
+    window.options = options;
+	//const step = 2 / options.resolution;
+	const step = 8 / options.resolution;
+    const width = options.resolution*step;
 	const grid
         = {triangles: [],
         	attributes:
-            {position: [], color: [], is_clif: [], tex_coord: [],
+            {position: [],  tex_coord: [],
             },
         };
 	// Generate grid:
 	for (let i = 0; i < options.resolution; i++) {
 		for (let j = 0; j < options.resolution; j++) {
-			const x = -1 + i * step;
-			const y = -1 + j * step;
+			const x = i * step;
+			const y = j * step;
 		    grid.attributes.position.push([x, y, 0]);
-		    grid.attributes.tex_coord.push([x / options.resolution, y / options.resolution]);
+		    grid.attributes.tex_coord.push([x / options.resolution/step, y / options.resolution/step]);
 		}
 	}
 
@@ -323,10 +328,10 @@ function genTerrain(options, do_color) {
 	}
 
 	// Do cuts:
-	const max_height = 2;
+	const max_height = step*50;
 	for (let i = 0; i < options.slices; i++) {
-		const p = [Math.random() * 2 - 1, Math.random() * 2 - 1, 0];
-		const cut2 = [Math.random() * 2 - 1, Math.random() * 2 - 1, 0];
+		const p = [Math.random() * width, Math.random() * width, 0];
+		const cut2 = [Math.random() * width, Math.random() * width, 0];
 		const dir = m4normalized_(m4sub_(p, cut2));
 
 		for (let j = 0; j < grid.attributes.position.length; j++) {
@@ -357,52 +362,11 @@ function genTerrain(options, do_color) {
 		}
 	}
 
-	// Color map
-	xmax = Math.max(...grid.attributes.position.map(x => x[2]));
-	xmin = Math.min(...grid.attributes.position.map(x => x[2]));
-	for (const i in grid.attributes.position) {
-		let z = grid.attributes.position[i][2];
-		z = (z - xmin) / (xmax - xmin);
-		if (do_color) {
-			// Grid.attributes.color.push([z, 0.5, 0.5, 1]);
-			grid.attributes.color.push(RainBowColor(z, 1));
-		} else {
-			grid.attributes.color.push([1, 0.373, 0.02, 1]);
-		}
-	}
 
-	// Cliff
-	for (const i in grid.attributes.position) {
-		grid.attributes.is_clif.push([0]);
-	}
-
-	for (const i in grid.triangles) {
-		const ps = grid.triangles[i].map(x => grid.attributes.position[x]); // Index of points
-		for (j in ps) {
-			for (k in ps) {
-				const v1 = ps[j];
-				const v2 = ps[k];
-				const slope = Math.abs(v1[2] - v2[2]) / step;
-				if (slope >= 1.5) {
-					grid.attributes.is_clif[grid.triangles[i][j]] = [1];
-					grid.attributes.is_clif[grid.triangles[i][k]] = [1];
-				}
-			}
-		}
-	}
-
+    window.grid = grid;
 	return grid;
 }
 
-// Credit: https://stackoverflow.com/questions/5137831/map-a-range-of-values-e-g-0-255-to-a-range-of-colours-e-g-rainbow-red-b
-// Sample a color from the rainbow at a given place of the rainbow.
-function RainBowColor(length, maxLength) {
-	const i = (length * 255 / maxLength);
-	const r = Math.round(Math.sin(0.024 * i + 0) * 127 + 128);
-	const g = Math.round(Math.sin(0.024 * i + 2) * 127 + 128);
-	const b = Math.round(Math.sin(0.024 * i + 4) * 127 + 128);
-	return [r / 255, g / 255, b / 255, 1];
-}
 
 window.addEventListener('load', setup);
 window.addEventListener('resize', fillScreen);
