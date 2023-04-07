@@ -151,13 +151,24 @@ function setupGeomery(geom, program) {
 function timeStep(milliseconds) {
 	const seconds = milliseconds / 1000;
 	const s2 = Math.cos(seconds / 2) - 1;
-	const dt = 0.02;
+	let dt = 0.02;
 
 	if (!window.eye) {
-		window.eye = [5, 8, -0, 1];  // TODO: interpolate correct height
+		window.eye = [5, 7, -0, 1];
 		window.forward_dir = [0, -1, 0, 1];
 		window.side_dir = [1, 0, 0, 1]; // Left side
 		window.up_dir = [0, 0, 1, 1];
+		window.eye[2] = interpolateGroundHeight(window.eye[0], window.eye[1]);
+	}
+
+	if (window.do_ground) {
+		const ground = interpolateGroundHeight(window.eye[0], window.eye[1]);
+		if (!(ground === null)) {
+			window.eye[2] = ground;
+			dt = 0.005;
+		}else{
+            window.do_ground=false;
+        }
 	}
 
 	const center = m4add_(eye, forward_dir);
@@ -205,21 +216,22 @@ function timeStep(milliseconds) {
 		window.up_dir = m4mult(rot, up_dir);
 	}
 
-
 	draw();
 	requestAnimationFrame(timeStep);
 }
 
-function keyDown(key){
-    // Fog
+function keyDown(key) {
+	// Fog
 	if (keysBeingPressed.F || keysBeingPressed.f) {
-        window.do_fog = !window.do_fog;
-    }
-    // Ground mode
-	if (keysBeingPressed.G || keysBeingPressed.g) {
-        window.do_ground = !window.do_ground;
-    }
+		window.do_fog = !window.do_fog;
+		console.log('fog', window.do_fog);
+	}
 
+	// Ground mode
+	if (keysBeingPressed.G || keysBeingPressed.g) {
+		window.do_ground = !window.do_ground;
+		console.log('ground mode', window.do_ground);
+	}
 }
 
 /**
@@ -250,8 +262,8 @@ async function setup(event) {
 		const texture = gl.createTexture();
 		gl.activeTexture(gl.TEXTURE0 + 0);
 		gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
 		gl.texImage2D(
 			gl.TEXTURE_2D, // Destination slot
@@ -296,17 +308,46 @@ function norm(x, length) {
 	return norm ** (1 / length);
 }
 
+function interpolateGroundHeight(x, y) {
+	x /= step;
+	y /= step;
+	const x1 = Math.floor(x);
+	const x2 = Math.ceil(x);
+	const y1 = Math.floor(y);
+	const y2 = Math.ceil(y);
+	let tx = x - x1;
+	const ty = y - y1;
+
+	const idx = (x, y) => (x * options.resolution + y);
+	const idx_z = (x, y) => window.grid.attributes.position[idx(x, y)][2];
+	const in_bound = x => x >= 0 && x < options.resolution;
+
+	if (![x1, x2, y1, y2].every(in_bound)) // OOB
+	{
+		console.log('ground mode OOB');
+		return null;
+	}
+
+	tx = 1 - tx;
+	const vx2 = tx * (idx_z(x1, y1)) + (1 - tx) * (idx_z(x2, y1));
+	const vx1 = tx * (idx_z(x1, y2)) + (1 - tx) * (idx_z(x2, y2));
+
+	const v = ty * vx1 + (1 - ty) * vx2;
+
+	return v + step * 2;
+}
+
 /* Generate a terrain geometry. If do_color, also generate the accommodating color map as colored vertex data */
 function genTerrain(options, do_color) {
 	console.log('genTerrain!');
-    window.options = options;
-	//const step = 2 / options.resolution;
-	const step = 8 / options.resolution;
-    const width = options.resolution*step;
+	window.options = options;
+	// Const step = 2 / options.resolution;
+	window.step = 8 / options.resolution;
+	window.width = options.resolution * step;
 	const grid
         = {triangles: [],
         	attributes:
-            {position: [],  tex_coord: [],
+            {position: [], tex_coord: [],
             },
         };
 	// Generate grid:
@@ -315,7 +356,7 @@ function genTerrain(options, do_color) {
 			const x = i * step;
 			const y = j * step;
 		    grid.attributes.position.push([x, y, 0]);
-		    grid.attributes.tex_coord.push([x / options.resolution/step, y / options.resolution/step]);
+		    grid.attributes.tex_coord.push([x / width, y / width]);
 		}
 	}
 
@@ -328,7 +369,7 @@ function genTerrain(options, do_color) {
 	}
 
 	// Do cuts:
-	const max_height = step*50;
+	const max_height = step * 50;
 	for (let i = 0; i < options.slices; i++) {
 		const p = [Math.random() * width, Math.random() * width, 0];
 		const cut2 = [Math.random() * width, Math.random() * width, 0];
@@ -350,8 +391,8 @@ function genTerrain(options, do_color) {
 	const zmax = 0;
 	const zmin = -1;
 	const c = 1 / 2;
-	let xmax = Math.max(...grid.attributes.position.map(x => x[2]));
-	let xmin = Math.min(...grid.attributes.position.map(x => x[2]));
+	const xmax = Math.max(...grid.attributes.position.map(x => x[2]));
+	const xmin = Math.min(...grid.attributes.position.map(x => x[2]));
 	const h = (xmax - xmin) * c;
 	if (h != 0) {
 		for (let j = 0; j < grid.attributes.position.length; j++) {
@@ -362,16 +403,16 @@ function genTerrain(options, do_color) {
 		}
 	}
 
-
-    window.grid = grid;
+	window.grid = grid;
 	return grid;
 }
-
 
 window.addEventListener('load', setup);
 window.addEventListener('resize', fillScreen);
 
 // Add key listeners for keyboard control
 window.keysBeingPressed = {};
-window.addEventListener('keydown', event => { keysBeingPressed[event.key] = true;keyDown(event.key);});
+window.addEventListener('keydown', event => {
+	keysBeingPressed[event.key] = true; keyDown(event.key);
+});
 window.addEventListener('keyup', event => keysBeingPressed[event.key] = false);
