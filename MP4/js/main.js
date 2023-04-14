@@ -368,19 +368,33 @@ function genTerrain(options, do_color) {
 		}
 	}
 
-	// Do cuts:
-	const max_height = step * 50;
+
+
+    	// Do cuts:
+	const max_height = 1;
+	const rand = () => Math.random() * width - 1;
+    const rand_ang = () => Math.random()*2*Math.PI
+    const rand_rad = () => Math.random()*(2**.5)
+    const random_point = () => {   
+        return [rand(), rand(),0]
+    }
+    const random_normal = () => {   
+        const a = rand_ang();
+        const r = rand_rad();
+        return [r*Math.sin(a), r*Math.cos(a),0]
+    }
 	for (let i = 0; i < options.slices; i++) {
-		const p = [Math.random() * width, Math.random() * width, 0];
-		const cut2 = [Math.random() * width, Math.random() * width, 0];
-		const dir = m4normalized_(m4sub_(p, cut2));
+		const p = random_point();
+		const normal = random_normal();
+		const dir = m4normalized_(m4sub_(p, normal));
 
 		for (let j = 0; j < grid.attributes.position.length; j++) {
 			const vtx = grid.attributes.position[j];
-			const det = m4dot_(m4sub_(vtx, p), dir);
+			const det = m4dot_(m4sub_(vtx, p), normal);
 
-			let delta = max_height / options.slices;
-			delta *= 0.995 ** i;
+			//let delta = max_height / options.slices;
+            let delta = 0.1
+            delta *= 0.995 ** i;
 			vtx[2] += det >= 0 ? delta : -delta;
 
 			grid.attributes.position[j] = vtx;
@@ -388,20 +402,56 @@ function genTerrain(options, do_color) {
 	}
 
 	// Post process
-	const zmax = 0;
-	const zmin = -1;
-	const c = 1 / 2;
-	const xmax = Math.max(...grid.attributes.position.map(x => x[2]));
-	const xmin = Math.min(...grid.attributes.position.map(x => x[2]));
-	const h = (xmax - xmin) * c;
-	if (h != 0) {
-		for (let j = 0; j < grid.attributes.position.length; j++) {
-			const vtx = grid.attributes.position[j];
-			const newz = (vtx[2] - zmin) * h / (zmax - zmin) - h / 2;
-			vtx[2] = newz;
-			grid.attributes.position[j] = vtx;
-		}
-	}
+    const c = 1 / 4;
+    let xmax = width;
+    let xmin = 0;
+    let zmax = Math.max(...grid.attributes.position.map(x => x[2]));
+    let zmin = Math.min(...grid.attributes.position.map(x => x[2]));
+    const h = (xmax - xmin) * c;
+    if (h != 0) {
+        for (let j = 0; j < grid.attributes.position.length; j++) {
+            const vtx = grid.attributes.position[j];
+            const newz = (vtx[2] - zmin) * h / (zmax - zmin) - (h / 2);
+            vtx[2] = newz;
+            grid.attributes.position[j] = vtx;
+        }
+    }
+
+
+	// Do cuts:
+	//const max_height = step * 50;
+	//for (let i = 0; i < options.slices; i++) {
+		//const p = [Math.random() * width, Math.random() * width, 0];
+		//const cut2 = [Math.random() * width, Math.random() * width, 0];
+		//const dir = m4normalized_(m4sub_(p, cut2));
+
+		//for (let j = 0; j < grid.attributes.position.length; j++) {
+			//const vtx = grid.attributes.position[j];
+			//const det = m4dot_(m4sub_(vtx, p), dir);
+
+			//let delta = max_height / options.slices;
+			//delta *= 0.995 ** i;
+			//vtx[2] += det >= 0 ? delta : -delta;
+
+			//grid.attributes.position[j] = vtx;
+		//}
+	//}
+
+	//// Post process
+	//const zmax = 0;
+	//const zmin = -1;
+	//const c = 1 / 2;
+	//const xmax = Math.max(...grid.attributes.position.map(x => x[2]));
+	//const xmin = Math.min(...grid.attributes.position.map(x => x[2]));
+	//const h = (xmax - xmin) * c;
+	//if (h != 0) {
+		//for (let j = 0; j < grid.attributes.position.length; j++) {
+			//const vtx = grid.attributes.position[j];
+			//const newz = (vtx[2] - zmin) * h / (zmax - zmin) - h / 2;
+			//vtx[2] = newz;
+			//grid.attributes.position[j] = vtx;
+		//}
+	//}
 
 	window.grid = grid;
 	return grid;
