@@ -255,8 +255,9 @@ function genSphere(options) {
 			curr++;
 		}
 	}
-    console.log("sphere budget: ", (options.long_res+1)*(options.lat_res+1))
-    console.log("sphere actual: ", grid.attributes.position.length)
+
+	console.log('sphere budget:', (options.long_res + 1) * (options.lat_res + 1));
+	console.log('sphere actual:', grid.attributes.position.length);
 	// Grid.attributes.normal = grid.attributes.normal.map(m4normalized_)
 	// Parametric formula is already normalized, no need to do it again
 
@@ -319,8 +320,9 @@ function genTorus(options) {
 		grid.attributes.is_clif.push([0]);
 		for (let i = 0; i < grid.attributes.position.length; i++) {}
 	}
-    console.log("torus budget: ", (options.n_ring+1)*(options.ring_res+1))
-    console.log("torus actual: ", grid.attributes.position.length)
+
+	console.log('torus budget:', (options.n_ring + 1) * (options.ring_res + 1));
+	console.log('torus actual:', grid.attributes.position.length);
 
 	return grid;
 }
@@ -354,18 +356,30 @@ function genTerrain(options, do_color) {
 	}
 
 	// Do cuts:
-	const max_height = 2;
+	const max_height = 1;
+	const rand = () => Math.random() * 2 - 1;
+    const rand_ang = () => Math.random()*2*Math.PI
+    const rand_rad = () => Math.random()*(2**.5)
+    const random_point = () => {   
+        return [rand(), rand(),0]
+    }
+    const random_normal = () => {   
+        const a = rand_ang();
+        const r = rand_rad();
+        return [r*Math.sin(a), r*Math.cos(a),0]
+    }
 	for (let i = 0; i < options.slices; i++) {
-		const p = [Math.random() * 2 - 1, Math.random() * 2 - 1, 0];
-		const cut2 = [Math.random() * 2 - 1, Math.random() * 2 - 1, 0];
-		const dir = m4normalized_(m4sub_(p, cut2));
+		const p = random_point();
+		const normal = random_normal();
+		const dir = m4normalized_(m4sub_(p, normal));
 
 		for (let j = 0; j < grid.attributes.position.length; j++) {
 			const vtx = grid.attributes.position[j];
-			const det = m4dot_(m4sub_(vtx, p), dir);
+			const det = m4dot_(m4sub_(vtx, p), normal);
 
-			let delta = max_height / options.slices;
-            delta *= 0.995**i
+			//let delta = max_height / options.slices;
+            let delta = 0.1
+            delta *= 0.995 ** i;
 			vtx[2] += det >= 0 ? delta : -delta;
 
 			grid.attributes.position[j] = vtx;
@@ -373,20 +387,22 @@ function genTerrain(options, do_color) {
 	}
 
 	// Post process
-	const zmax = 0;
-	const zmin = -1;
-	const c = 1 / 2;
-	let xmax = Math.max(...grid.attributes.position.map(x => x[2]));
-	let xmin = Math.min(...grid.attributes.position.map(x => x[2]));
-	const h = (xmax - xmin) * c;
-	if (h != 0) {
-		for (let j = 0; j < grid.attributes.position.length; j++) {
-			const vtx = grid.attributes.position[j];
-			const newz = (vtx[2] - zmin) * h / (zmax - zmin) - h / 2;
-			vtx[2] = newz;
-			grid.attributes.position[j] = vtx;
-		}
-	}
+    const c = 1 / 3;
+    let xmax = 1;
+    let xmin = -1;
+    let zmax = Math.max(...grid.attributes.position.map(x => x[2]));
+    let zmin = Math.min(...grid.attributes.position.map(x => x[2]));
+    console.log("zmax",zmax)
+    console.log("zmin",zmin)
+    const h = (xmax - xmin) * c;
+    if (h != 0) {
+        for (let j = 0; j < grid.attributes.position.length; j++) {
+            const vtx = grid.attributes.position[j];
+            const newz = (vtx[2] - zmin) * h / (zmax - zmin) - (h / 2);
+            vtx[2] = newz;
+            grid.attributes.position[j] = vtx;
+        }
+    }
 
 	// Color map
 	xmax = Math.max(...grid.attributes.position.map(x => x[2]));
