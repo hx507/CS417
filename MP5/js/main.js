@@ -17,7 +17,8 @@ function fillScreen() {
 	if (window.gl) {
 		gl.viewport(0, 0, canvas.width, canvas.height);
 		window.p = m4perspNegZ(0.1, 900, 1.5, gl.canvas.width, gl.canvas.height);
-		draw();
+		//draw();
+		drawBalls();
 	}
 }
 
@@ -93,15 +94,35 @@ function draw() {
 	gl.clearColor(...IlliniBlue); // F(...[1,2,3]) means f(1,2,3)
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.useProgram(program);
-
 	gl.bindVertexArray(geom.vao);
-
 	gl.uniform1i(gl.getUniformLocation(program, 'texture'), gl.TEXTURE0);
 	gl.uniform1i(gl.getUniformLocation(program, 'do_fog'), window.do_fog);
 	gl.uniform4fv(gl.getUniformLocation(program, 'bg_color'), IlliniBlue);
 	gl.uniformMatrix4fv(gl.getUniformLocation(program, 'p'), false, p);
 	gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
 	gl.drawElements(geom.mode, geom.count, geom.type, 0);
+}
+
+function drawBalls() {
+	gl.clearColor(...IlliniBlue); // F(...[1,2,3]) means f(1,2,3)
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	gl.useProgram(program);
+	gl.bindVertexArray(geom.vao);
+	gl.uniform1i(gl.getUniformLocation(program, 'texture'), gl.TEXTURE0);
+	gl.uniform1i(gl.getUniformLocation(program, 'do_fog'), window.do_fog);
+	gl.uniform4fv(gl.getUniformLocation(program, 'bg_color'), IlliniBlue);
+	gl.uniformMatrix4fv(gl.getUniformLocation(program, 'p'), false, p);
+	//gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
+
+    for (let i=0;i<50;i++) {
+        console.log("draw 1 ball")
+        window.m = m4mult( m4translate(...balls.position[i]),m4scale(balls.size[i]));
+        gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
+        gl.uniform4fv(gl.getUniformLocation(program, 'color'), balls.color[i]);
+
+        gl.drawElements(geom.mode, geom.count, geom.type, 0);
+    }
+	//gl.drawElements(geom.mode, geom.count, geom.type, 0);
 }
 
 /**
@@ -151,18 +172,17 @@ function setupGeomery(geom, program) {
 function timeStep(milliseconds) {
 	const seconds = milliseconds / 1000;
 	const s2 = Math.cos(seconds / 2) - 1;
-	let dt = 0.02;
+	const dt = 0.02;
 
-	window.eye = [3, 3, 1, 1];
-	const center = [0,0,0,1];
-	window.v = m4view(eye, center, [0,0,1]); // Eye, center, up
+	window.eye = [2, 2, 1, 1];
+	const center = [0, 0, 0, 1];
+	window.v = m4view(eye, center, [0, 0, 1]); // Eye, center, up
 	gl.uniform3fv(gl.getUniformLocation(program, 'eyedir'), new Float32Array(m4normalized_(eye.slice(0, -1))));
 
-
-	draw();
+	//draw();
+    drawBalls();
 	requestAnimationFrame(timeStep);
 }
-
 
 /**
  * Compile, link, set up geometry
@@ -176,35 +196,12 @@ async function setup(event) {
 	const fs = document.querySelector('#frag').textContent.trim();
 	window.program = compileAndLinkGLSL(vs, fs);
 	gl.enable(gl.DEPTH_TEST);
-	window.m = m4ident();
+	// Window.m = m4ident();
+	window.m = m4scale(0.5);
 	window.v = m4ident();
 	window.p = m4ident();
 
-	setupScene('terrain', {resolution: 100, slices: 100});
-
-	// Load the texture image
-	const img = new Image();
-	img.crossOrigin = 'anonymous';
-	img.src = './farm.jpg';
-	img.addEventListener('load', event => {
-		console.log('img loaded', event);
-		// Create the texture
-		const texture = gl.createTexture();
-		gl.activeTexture(gl.TEXTURE0 + 0);
-		gl.bindTexture(gl.TEXTURE_2D, texture);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-		gl.texImage2D(
-			gl.TEXTURE_2D, // Destination slot
-			0, // The mipmap level this data provides; almost always 0
-			gl.RGBA, // How to store it in graphics memory
-			gl.RGBA, // How it is stored in the image object
-			gl.UNSIGNED_BYTE, // Size of a single pixel-color in HTML
-			img, // Source data
-		);
-		gl.generateMipmap(gl.TEXTURE_2D); // Lets you use a mipmapping min filter
-	});
+	await setupScene('terrain', {resolution: 100, slices: 100});
 
 	requestAnimationFrame(timeStep);
 	fillScreen();
@@ -224,7 +221,8 @@ async function setupScene(scene, options) {
 		data = await fetch('test.json').then(r => r.json());
 		addNormals(data);
 	} else if (scene == 'terrain') {
-		data = genTerrain(options, false);
+		genBalls(50);
+		data = await fetch('sphere80.json').then(r => r.json());
 		addNormals(data);
 	}
 
@@ -238,45 +236,32 @@ function norm(x, length) {
 	return norm ** (1 / length);
 }
 
-
 /* Generate a terrain geometry. If do_color, also generate the accommodating color map as colored vertex data */
-function genTerrain(options, do_color) {
-	console.log('genTerrain!');
-	window.options = options;
-	// Const step = 2 / options.resolution;
-	window.step = 8 / options.resolution;
-	window.width = options.resolution * step;
-	const grid
-        = {triangles: [],
-        	attributes:
-            {position: [], tex_coord: [],
-            },
-        };
-	// Generate grid:
-	for (let i = 0; i < options.resolution; i++) {
-		for (let j = 0; j < options.resolution; j++) {
-			const x = i * step;
-			const y = j * step;
-		    grid.attributes.position.push([x, y, 0]);
-		    grid.attributes.tex_coord.push([x / width, y / width]);
-		}
-	}
+function genBalls(n) {
+	console.log('genBalls!');
 
-	for (let i = 0; i < options.resolution - 1; i++) {
-		for (let j = 0; j < options.resolution - 1; j++) {
-			const idx = (x, y) => (x * options.resolution + y);
-			const ks = [idx(i, j), idx(i + 1, j), idx(i, j + 1), idx(i + 1, j + 1)];
-			grid.triangles.push([ks[0], ks[1], ks[2]], [ks[3], ks[2], ks[1]]);
-		}
-	}
+	window.xbound = 1;
+	window.ybound = 1;
+	window.zbound = 1;
 
+    let randbound = ()=>Math.random()*2-1;
+    let randcolor = ()=>new Float32Array([Math.random(),Math.random(),Math.random(), 1]);
 
+	window.balls
+        = {position: [],
+        	size: [],
+			color: [],
+			mass: [],
+            velocity: [],
+		};
 
+    for(let i=0;i<n;i++){
+        balls.position.push([randbound(),randbound(),randbound()])
+        balls.size.push([0.1])
+        balls.color.push(randcolor())
+    }
 
-	window.grid = grid;
-	return grid;
 }
 
 window.addEventListener('load', setup);
 window.addEventListener('resize', fillScreen);
-
