@@ -92,6 +92,14 @@ function m4multvec_(m1,v) {
     }
     return ans
 }
+
+function v4multscalar(v, a) {
+    return v.map(x=>x*a)
+}
+function v4addv4(v1, v2) {
+    return v1.map((x,i)=>x+v2[i])
+}
+
 /**
  * Multiplies any number of matrices and returns the result.
  * Call as m4mult(A, B, C, D) to evaluate $A B C D$.

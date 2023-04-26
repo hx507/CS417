@@ -16,8 +16,8 @@ function fillScreen() {
 	window.p = m4perspNegZ(1, 9, 0.7, canvas.width, canvas.height);
 	if (window.gl) {
 		gl.viewport(0, 0, canvas.width, canvas.height);
-		window.p = m4perspNegZ(0.1, 900, 1.5, gl.canvas.width, gl.canvas.height);
-		//draw();
+		window.p = m4perspNegZ(0.1, 900, 0.9, gl.canvas.width, gl.canvas.height);
+		// Draw();
 		drawBalls();
 	}
 }
@@ -95,9 +95,6 @@ function draw() {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.useProgram(program);
 	gl.bindVertexArray(geom.vao);
-	gl.uniform1i(gl.getUniformLocation(program, 'texture'), gl.TEXTURE0);
-	gl.uniform1i(gl.getUniformLocation(program, 'do_fog'), window.do_fog);
-	gl.uniform4fv(gl.getUniformLocation(program, 'bg_color'), IlliniBlue);
 	gl.uniformMatrix4fv(gl.getUniformLocation(program, 'p'), false, p);
 	gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
 	gl.drawElements(geom.mode, geom.count, geom.type, 0);
@@ -108,21 +105,18 @@ function drawBalls() {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.useProgram(program);
 	gl.bindVertexArray(geom.vao);
-	gl.uniform1i(gl.getUniformLocation(program, 'texture'), gl.TEXTURE0);
-	gl.uniform1i(gl.getUniformLocation(program, 'do_fog'), window.do_fog);
-	gl.uniform4fv(gl.getUniformLocation(program, 'bg_color'), IlliniBlue);
 	gl.uniformMatrix4fv(gl.getUniformLocation(program, 'p'), false, p);
-	//gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
+	// Gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
 
-    for (let i=0;i<50;i++) {
-        console.log("draw 1 ball")
-        window.m = m4mult( m4translate(...balls.position[i]),m4scale(balls.size[i]));
-        gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
-        gl.uniform4fv(gl.getUniformLocation(program, 'color'), balls.color[i]);
+	for (let i = 0; i < 50; i++) {
+		// Console.log('draw 1 ball');
+		window.m = m4mult(m4translate(...balls.position[i]), m4scale(balls.size[i]));
+		gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
+		gl.uniform4fv(gl.getUniformLocation(program, 'ball_color'), balls.color[i]);
 
-        gl.drawElements(geom.mode, geom.count, geom.type, 0);
-    }
-	//gl.drawElements(geom.mode, geom.count, geom.type, 0);
+		gl.drawElements(geom.mode, geom.count, geom.type, 0);
+	}
+	// Gl.drawElements(geom.mode, geom.count, geom.type, 0);
 }
 
 /**
@@ -166,6 +160,9 @@ function setupGeomery(geom, program) {
 	};
 }
 
+const average = arr => arr.reduce((a, b) => Number(a) + Number(b)) / arr.length;
+
+
 /**
  * Compute any time-varying or animated aspects of the scene
  */
@@ -174,13 +171,24 @@ function timeStep(milliseconds) {
 	const s2 = Math.cos(seconds / 2) - 1;
 	const dt = 0.02;
 
-	window.eye = [2, 2, 1, 1];
+	window.eye = [4, 4, 1, 1];
 	const center = [0, 0, 0, 1];
 	window.v = m4view(eye, center, [0, 0, 1]); // Eye, center, up
 	gl.uniform3fv(gl.getUniformLocation(program, 'eyedir'), new Float32Array(m4normalized_(eye.slice(0, -1))));
 
-	//draw();
-    drawBalls();
+	// Draw();
+	drawBalls();
+
+	const elapsed = performance.now() - window.last_render_time; // Keep moving average of fps
+	window.last_render_time = performance.now();
+	const fps = (1000 / elapsed).toFixed(0);
+	if (window.fps_history.length > 100) { 
+         fps_history.shift();
+	}
+	fps_history.push(fps);
+
+	document.querySelector('#fps').innerHTML = 'FPS: ' + average(fps_history).toFixed(0);
+
 	requestAnimationFrame(timeStep);
 }
 
@@ -240,28 +248,78 @@ function norm(x, length) {
 function genBalls(n) {
 	console.log('genBalls!');
 
-	window.xbound = 1;
-	window.ybound = 1;
-	window.zbound = 1;
+	window.n = n;
+	window.bounds = [1.5, 1.5, 1.5];
 
-    let randbound = ()=>Math.random()*2-1;
-    let randcolor = ()=>new Float32Array([Math.random(),Math.random(),Math.random(), 1]);
+	const randrange = x => Math.random() * x * 2 - x;
+	const randbound = () => randrange(bounds[0] - 0.2);
+	const randcolor = () => new Float32Array([Math.random(), Math.random(), Math.random(), 1]);
 
 	window.balls
         = {position: [],
         	size: [],
 			color: [],
 			mass: [],
-            velocity: [],
+			velocity: [],
 		};
 
-    for(let i=0;i<n;i++){
-        balls.position.push([randbound(),randbound(),randbound()])
-        balls.size.push([0.1])
-        balls.color.push(randcolor())
-    }
+	for (let i = 0; i < n; i++) {
+		balls.position.push([randbound(), randbound(), randbound()]);
+		balls.size.push([0.1]);
+		balls.color.push(randcolor());
 
+		balls.mass.push([1]);
+		balls.velocity.push([randbound(), randbound(), randbound()]);
+	}
 }
 
+function clip(x, u) {
+	return Math.min(Math.max(x, -u), u);
+}
+
+function stepBalls() {
+	const dt = 0.01;
+	const ball_size_scale = 0.1;
+
+	// Gravity
+	const gravity_strength = 0.8;
+	for (let i = 0; i < n; i++) {
+		balls.velocity[i][2] -= gravity_strength * dt;
+	}
+
+	// Drag
+	const drag_factor = 0.9;
+	for (let i = 0; i < n; i++) {
+		balls.velocity[i] = v4multscalar(balls.velocity[i], drag_factor ** dt);
+	}
+
+	// Ball-ball collision
+
+	// wall collision with non-zero non-one elasticity
+	const elasticity = 0.9;
+	for (let i = 0; i < n; i++) {
+		for (let d = 0; d < 3; d++) {
+			if (Math.abs(balls.position[i][d]) + balls.size[i] * ball_size_scale > window.bounds[d]) {
+				balls.velocity[i][d] *= -Math.sign(Math.abs(balls.position[i][d])) * elasticity;
+			}
+		}
+	}
+
+	// Clip into box
+	for (let i = 0; i < n; i++) {
+		balls.position[i] = balls.position[i].map((x, j) => clip(x, bounds[j] - (balls.size[i] * ball_size_scale)));
+	}
+
+	// Step positions based on new velocity
+	for (let i = 0; i < n; i++) {
+		// Balls.position[i] += v4multscalar(balls.velocity[i], dt);
+		balls.position[i] = v4addv4(balls.position[i], v4multscalar(balls.velocity[i], dt));
+	}
+}
+
+window.fps_history = [];
+window.last_render_time = performance.now();
 window.addEventListener('load', setup);
 window.addEventListener('resize', fillScreen);
+// SetInterval(() => location.reload(), 10_000); // Periodic reset 10 sec
+setInterval(stepBalls, 1); // Step every 1ms

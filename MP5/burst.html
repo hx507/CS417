@@ -34,10 +34,8 @@ void main() {
         <script id="frag" type="glsl">
             #version 300 es
 precision highp float;
-uniform vec4 bg_color;
+uniform vec4 ball_color;
 uniform vec3 eyedir;
-uniform int do_fog;
-uniform sampler2D image;
 
 out vec4 fragColor;
 in vec3 outnormal;
@@ -48,9 +46,9 @@ in vec2 out_tex_coord;
 
 const vec3 lightdir = vec3(0.9, -0.6, 0.8);
 void main() {
-    // vec4 used_color =  texture(image, out_tex_coord);
-    // vec4 used_color =  vec4(0.8,0.3,0.5,1);
-    vec4 used_color =  vtx_color;
+    //vec4 used_color =  vec4(0.8,0.3,0.5,1);
+    vec4 used_color =  ball_color;
+    //vec4 used_color =  vec4(0.8,0.3,0.5,1) + ball_color;
 
     vec3 normal = normalize(outnormal);
     vec3 x = normal * dot(normal, lightdir);
@@ -60,12 +58,8 @@ void main() {
     float lambert = max(0.0, dot(lightdir, normal));
     vec4 surface_color = vec4((used_color.rgb * lambert) + vec3(phong, phong, phong)/300.0, used_color.a);
 
-    //float fog_distance = (gl_FragCoord.z *10.)*(gl_FragCoord.z *10.)/100.;
-    float fog_distance = gl_FragCoord.z;
-    if(do_fog!=0)
-        fragColor = gl_FragCoord.z*bg_color + (1.-gl_FragCoord.z)*surface_color;
-    else
-        fragColor = surface_color;
+    fragColor = surface_color;
+    //fragColor = ball_color;
 }
         </script>
 
@@ -123,6 +117,7 @@ body { margin: 0; border: none; padding: 0; display: flex; }
     </head>
     <body style="margin: 0px;">
         <div class="display"><canvas style="" width="729" height="674"></canvas></div>
+        <div id="fps" style="position:fixed; bottom:0; right:0; display:table; color:rgb(255,95,5)"></div>
 
 
     </body></html>
