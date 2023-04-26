@@ -110,7 +110,8 @@ function drawBalls() {
 
 	for (let i = 0; i < 50; i++) {
 		// Console.log('draw 1 ball');
-		window.m = m4mult(m4translate(...balls.position[i]), m4scale(balls.size[i]));
+        const ball_size_scale = 1.25; // Make ball of size 1 have ~radius 1
+		window.m = m4mult(m4translate(...balls.position[i]), m4scale(balls.size[i]/ball_size_scale));
 		gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
 		gl.uniform4fv(gl.getUniformLocation(program, 'ball_color'), balls.color[i]);
 
@@ -160,8 +161,7 @@ function setupGeomery(geom, program) {
 	};
 }
 
-const average = arr => arr.reduce((a, b) => Number(a) + Number(b)) / arr.length;
-
+const average = array => array.reduce((a, b) => Number(a) + Number(b)) / array.length;
 
 /**
  * Compute any time-varying or animated aspects of the scene
@@ -182,9 +182,10 @@ function timeStep(milliseconds) {
 	const elapsed = performance.now() - window.last_render_time; // Keep moving average of fps
 	window.last_render_time = performance.now();
 	const fps = (1000 / elapsed).toFixed(0);
-	if (window.fps_history.length > 100) { 
-         fps_history.shift();
+	if (window.fps_history.length > 100) {
+		fps_history.shift();
 	}
+
 	fps_history.push(fps);
 
 	document.querySelector('#fps').innerHTML = 'FPS: ' + average(fps_history).toFixed(0);
@@ -265,10 +266,10 @@ function genBalls(n) {
 
 	for (let i = 0; i < n; i++) {
 		balls.position.push([randbound(), randbound(), randbound()]);
-		balls.size.push([0.1]);
+		balls.size.push(0.23);
 		balls.color.push(randcolor());
 
-		balls.mass.push([1]);
+		balls.mass.push(1);
 		balls.velocity.push([randbound(), randbound(), randbound()]);
 	}
 }
@@ -279,7 +280,6 @@ function clip(x, u) {
 
 function stepBalls() {
 	const dt = 0.01;
-	const ball_size_scale = 0.1;
 
 	// Gravity
 	const gravity_strength = 0.8;
@@ -294,12 +294,46 @@ function stepBalls() {
 	}
 
 	// Ball-ball collision
+	const collide = (i, j) => {
+		const v1 = balls.velocity[i];
+		const m1 = balls.mass[i];
+		const x1 = balls.position[i];
+		const v2 = balls.velocity[j];
+		const m2 = balls.mass[j];
+		const x2 = balls.position[j];
 
-	// wall collision with non-zero non-one elasticity
+		const f1 = 2 * m2 / (m1 + m2);
+		const f2 = v4inner(v4subv4(v1, v2), v4subv4(x1, x2)) / (norm(v4subv4(x1, x2)) ** 2);
+		const fv3 = v4subv4(x1, x2);
+		const vp = v4subv4(v1, v4multscalar(fv3, f1 * f2));
+		return vp;
+	};
+
+	for (let i = 0; i < n; i++) {
+		for (let j = 0; j < n; j++) {
+			if (i == j) {
+				continue;
+			}
+
+			const x1 = balls.position[i];
+			const x2 = balls.position[j];
+			const v1 = balls.velocity[i];
+			const v2 = balls.velocity[j];
+			if (norm(v4subv4(x1, x2)) <= (balls.size[i] + balls.size[j])*1.4 && v4inner(v4subv4(v1,v2),v4subv4(x1,x2)) < 0) {
+				console.log('Collide!');
+				const v1p = collide(i, j);
+				const v2p = collide(j, i);
+				balls.velocity[i] = v1p;
+				balls.velocity[j] = v2p;
+			}
+		}
+	}
+
+	// Wall collision with non-zero non-one elasticity
 	const elasticity = 0.9;
 	for (let i = 0; i < n; i++) {
 		for (let d = 0; d < 3; d++) {
-			if (Math.abs(balls.position[i][d]) + balls.size[i] * ball_size_scale > window.bounds[d]) {
+			if (Math.abs(balls.position[i][d]) + balls.size[i] > window.bounds[d]) {
 				balls.velocity[i][d] *= -Math.sign(Math.abs(balls.position[i][d])) * elasticity;
 			}
 		}
@@ -307,7 +341,7 @@ function stepBalls() {
 
 	// Clip into box
 	for (let i = 0; i < n; i++) {
-		balls.position[i] = balls.position[i].map((x, j) => clip(x, bounds[j] - (balls.size[i] * ball_size_scale)));
+		balls.position[i] = balls.position[i].map((x, j) => clip(x, bounds[j] - (balls.size[i])));
 	}
 
 	// Step positions based on new velocity
@@ -321,5 +355,5 @@ window.fps_history = [];
 window.last_render_time = performance.now();
 window.addEventListener('load', setup);
 window.addEventListener('resize', fillScreen);
-// SetInterval(() => location.reload(), 10_000); // Periodic reset 10 sec
+setInterval(() => location.reload(), 10_000); // Periodic reset 10 sec
 setInterval(stepBalls, 1); // Step every 1ms

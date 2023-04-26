@@ -99,6 +99,12 @@ function v4multscalar(v, a) {
 function v4addv4(v1, v2) {
     return v1.map((x,i)=>x+v2[i])
 }
+function v4subv4(v1, v2) {
+    return v1.map((x,i)=>x-v2[i])
+}
+function v4inner(v1, v2) {
+    return v1.map((x,i)=>x*v2[i]).reduce((a, b) => Number(a) + Number(b))
+}
 
 /**
  * Multiplies any number of matrices and returns the result.
