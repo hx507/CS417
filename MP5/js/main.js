@@ -110,8 +110,8 @@ function drawBalls() {
 
 	for (let i = 0; i < 50; i++) {
 		// Console.log('draw 1 ball');
-        const ball_size_scale = 1.25; // Make ball of size 1 have ~radius 1
-		window.m = m4mult(m4translate(...balls.position[i]), m4scale(balls.size[i]/ball_size_scale));
+		const ball_size_scale = 1; // Make ball of size 1 have ~radius 1
+		window.m = m4mult(m4translate(...balls.position[i]), m4scale(balls.size[i] / ball_size_scale));
 		gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mv'), false, m4mult(v, m));
 		gl.uniform4fv(gl.getUniformLocation(program, 'ball_color'), balls.color[i]);
 
@@ -245,6 +245,10 @@ function norm(x, length) {
 	return norm ** (1 / length);
 }
 
+function randInt(max) {
+	return Math.floor(Math.random() * max);
+}
+
 /* Generate a terrain geometry. If do_color, also generate the accommodating color map as colored vertex data */
 function genBalls(n) {
 	console.log('genBalls!');
@@ -264,12 +268,24 @@ function genBalls(n) {
 			velocity: [],
 		};
 
+	const base_size = 0.13;
+	const viable_size = [base_size, base_size * 2, base_size * 3];
+
 	for (let i = 0; i < n; i++) {
 		balls.position.push([randbound(), randbound(), randbound()]);
-		balls.size.push(0.23);
+		// Balls.size.push(viable_size[randInt(viable_size.length)]);
+		if (i < 4) {
+			balls.size.push(viable_size[2]);
+		} else if(i<25) {
+			balls.size.push(viable_size[1]);
+		}else{
+			balls.size.push(viable_size[0]);
+        }
+
+		balls.mass.push(balls.size[i]**3);
+
 		balls.color.push(randcolor());
 
-		balls.mass.push(1);
 		balls.velocity.push([randbound(), randbound(), randbound()]);
 	}
 }
@@ -319,7 +335,7 @@ function stepBalls() {
 			const x2 = balls.position[j];
 			const v1 = balls.velocity[i];
 			const v2 = balls.velocity[j];
-			if (norm(v4subv4(x1, x2)) <= (balls.size[i] + balls.size[j])*1.4 && v4inner(v4subv4(v1,v2),v4subv4(x1,x2)) < 0) {
+			if (norm(v4subv4(x1, x2)) <= (balls.size[i] + balls.size[j]) * 1.3 && v4inner(v4subv4(v1, v2), v4subv4(x1, x2)) < 0) {
 				console.log('Collide!');
 				const v1p = collide(i, j);
 				const v2p = collide(j, i);
