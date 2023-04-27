@@ -177,6 +177,7 @@ function timeStep(milliseconds) {
 	gl.uniform3fv(gl.getUniformLocation(program, 'eyedir'), new Float32Array(m4normalized_(eye.slice(0, -1))));
 
 	// Draw();
+    stepBalls();
 	drawBalls();
 
 	const elapsed = performance.now() - window.last_render_time; // Keep moving average of fps
@@ -230,7 +231,7 @@ async function setupScene(scene, options) {
 		data = await fetch('test.json').then(r => r.json());
 		addNormals(data);
 	} else if (scene == 'terrain') {
-		genBalls(50 * 20);
+		genBalls(50 * 30);
 		data = await fetch('sphere80.json').then(r => r.json());
 		addNormals(data);
 	}
@@ -304,17 +305,16 @@ function genBalls(n) {
 	}
 }
 
-// x -> i
-function g_idx(x){
-	let start = -bounds[0];
-	let diff = x-start;
-	return Math.ceil(diff/cell_size);
+// X -> i
+function g_idx(x) {
+	const start = -bounds[0];
+	const diff = x - start;
+	return Math.ceil(diff / cell_size);
 }
 
 function clear_grid() {
-	window.grid = grid.map(x => x.map(y => y.map(z => {
-		console.log(z);
-		//z.clear();
+	window.grid.map(x => x.map(y => y.map(z => {
+		z.clear();
 	})));
 }
 
@@ -354,29 +354,37 @@ function stepBalls() {
 	};
 
 	// Efficient implimentation
-	
-	if(true){
+
+	if (true) {
 		clear_grid();
 		// Linear scan
 		for (let i = 0; i < n; i++) {
 			const gi = balls.position[i].map(g_idx);
 			grid[gi[0]][gi[1]][gi[2]].add(i);
 		}
+
 		// Find balls in neibhoring cells
 		for (let i = 0; i < n; i++) {
 			const gi = balls.position[i].map(g_idx);
-			let nbh = new Set()
-			for (let a = -1; a < 2; a++) 
-			for (let b = -1; b < 2; b++) 
-			for (let c = -1; c < 2; c++){
-				let nbh_set = grid[gi[0]+a][gi[1]+b][gi[2]+c];
-				if(nbh_set){
-					for (const elem of nbh_set)
-						nbh.add(elem);
+			const nbh = new Set();
+			for (let a = -1; a < 2; a++) {
+				for (let b = -1; b < 2; b++) {
+					for (let c = -1; c < 2; c++) {
+						const nbh_set = grid[gi[0] + a][gi[1] + b][gi[2] + c];
+						if (nbh_set) {
+							for (const element of nbh_set) {
+								nbh.add(element);
+							}
+						}
+					}
 				}
 			}
-			for (const j of nbh){
-				if(j==i)continue;
+
+			for (const j of nbh) {
+				if (j == i) {
+					continue;
+				}
+
 				const x1 = balls.position[i];
 				const x2 = balls.position[j];
 				const v1 = balls.velocity[i];
@@ -389,31 +397,29 @@ function stepBalls() {
 				}
 			}
 		}
-
-
 	}
 
 	// Naive implimentation
-	if(false)
-	for (let i = 0; i < n; i++) {
-		for (let j = 0; j < n; j++) {
-			if (i == j) {
-				continue;
-			}
+	if (false) {
+		for (let i = 0; i < n; i++) {
+			for (let j = 0; j < n; j++) {
+				if (i == j) {
+					continue;
+				}
 
-			const x1 = balls.position[i];
-			const x2 = balls.position[j];
-			const v1 = balls.velocity[i];
-			const v2 = balls.velocity[j];
-			if (norm(v4subv4(x1, x2)) <= (balls.size[i] + balls.size[j]) * 1.3 && v4inner(v4subv4(v1, v2), v4subv4(x1, x2)) < 0) {
-				const v1p = collide(i, j);
-				const v2p = collide(j, i);
-				balls.velocity[i] = v1p;
-				balls.velocity[j] = v2p;
+				const x1 = balls.position[i];
+				const x2 = balls.position[j];
+				const v1 = balls.velocity[i];
+				const v2 = balls.velocity[j];
+				if (norm(v4subv4(x1, x2)) <= (balls.size[i] + balls.size[j]) * 1.3 && v4inner(v4subv4(v1, v2), v4subv4(x1, x2)) < 0) {
+					const v1p = collide(i, j);
+					const v2p = collide(j, i);
+					balls.velocity[i] = v1p;
+					balls.velocity[j] = v2p;
+				}
 			}
 		}
 	}
-
 
 	// Wall collision with non-zero non-one elasticity
 	const elasticity = 0.9;
@@ -441,5 +447,5 @@ window.fps_history = [];
 window.last_render_time = performance.now();
 window.addEventListener('load', setup);
 window.addEventListener('resize', fillScreen);
-//setInterval(() => location.reload(), 10_000); // Periodic reset 10 sec
-setInterval(stepBalls, 1); // Step every 1ms
+// SetInterval(() => location.reload(), 10_000); // Periodic reset 10 sec
+//setInterval(stepBalls, 1); // Step every 1ms
