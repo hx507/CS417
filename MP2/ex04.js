@@ -235,8 +235,7 @@ async function setup(event) {
     requestAnimationFrame(draw)
 }
 
-// Reference function for drawing the warmp, not used
-// TODO: remove during clean up
+// Reference function for drawing the warmp, see the warmup submission for more details
 function drawWarmUp(milliseconds) {
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.useProgram(program)
@@ -250,8 +249,7 @@ function drawWarmUp(milliseconds) {
     gl.drawArrays(connection, 0, count)
     requestAnimationFrame(drawWarmUp)
 }
-// Reference function for drawing the warmp, not used
-// TODO: remove during clean up
+// Reference function for drawing the warmp, see the warmup submission for more details
 async function setupWarmUp(event) {
     reset();
     cancelAllAnimationFrames();
