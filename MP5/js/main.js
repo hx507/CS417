@@ -177,7 +177,7 @@ function timeStep(milliseconds) {
 	gl.uniform3fv(gl.getUniformLocation(program, 'eyedir'), new Float32Array(m4normalized_(eye.slice(0, -1))));
 
 	// Draw();
-    stepBalls();
+	stepBalls();
 	drawBalls();
 
 	const elapsed = performance.now() - window.last_render_time; // Keep moving average of fps
@@ -231,7 +231,8 @@ async function setupScene(scene, options) {
 		data = await fetch('test.json').then(r => r.json());
 		addNormals(data);
 	} else if (scene == 'terrain') {
-		genBalls(50 * 30);
+        const number_of_balls_multiplier = 1; // Tune this parameter to get more balls added, to test for efficient collision result
+		genBalls(50 * 1);
 		data = await fetch('sphere80.json').then(r => r.json());
 		addNormals(data);
 	}
@@ -299,7 +300,7 @@ function genBalls(n) {
 		for (let j = 0; j < cell_row_count[1]; j++) {
 			grid[i].push([]);
 			for (let k = 0; k < cell_row_count[2]; k++) {
-				grid[i][j].push(new Set());
+				grid[i][j].push([]);
 			}
 		}
 	}
@@ -314,7 +315,8 @@ function g_idx(x) {
 
 function clear_grid() {
 	window.grid.map(x => x.map(y => y.map(z => {
-		z.clear();
+		// Z.clear();
+		z.length = 0;
 	})));
 }
 
@@ -360,20 +362,21 @@ function stepBalls() {
 		// Linear scan
 		for (let i = 0; i < n; i++) {
 			const gi = balls.position[i].map(g_idx);
-			grid[gi[0]][gi[1]][gi[2]].add(i);
+			grid[gi[0]][gi[1]][gi[2]].push(i);
 		}
 
 		// Find balls in neibhoring cells
 		for (let i = 0; i < n; i++) {
 			const gi = balls.position[i].map(g_idx);
-			const nbh = new Set();
+			// Const nbh = [];
+			nbh.length = 0;
 			for (let a = -1; a < 2; a++) {
 				for (let b = -1; b < 2; b++) {
 					for (let c = -1; c < 2; c++) {
 						const nbh_set = grid[gi[0] + a][gi[1] + b][gi[2] + c];
 						if (nbh_set) {
 							for (const element of nbh_set) {
-								nbh.add(element);
+								nbh.push(element);
 							}
 						}
 					}
@@ -444,8 +447,9 @@ function stepBalls() {
 }
 
 window.fps_history = [];
+window.nbh = [];
 window.last_render_time = performance.now();
 window.addEventListener('load', setup);
 window.addEventListener('resize', fillScreen);
-// SetInterval(() => location.reload(), 10_000); // Periodic reset 10 sec
-//setInterval(stepBalls, 1); // Step every 1ms
+setInterval(() => location.reload(), 10_000); // Periodic reset 10 sec
+// setInterval(stepBalls, 1); // Step every 1ms
