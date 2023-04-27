@@ -312,7 +312,10 @@ function g_idx(x){
 }
 
 function clear_grid() {
-	window.grid = grid.map(x => x.map(y => y.map(z => z.clear())));
+	window.grid = grid.map(x => x.map(y => y.map(z => {
+		console.log(z);
+		//z.clear();
+	})));
 }
 
 function clip(x, u) {
@@ -353,6 +356,7 @@ function stepBalls() {
 	// Efficient implimentation
 	
 	if(true){
+		clear_grid();
 		// Linear scan
 		for (let i = 0; i < n; i++) {
 			const gi = balls.position[i].map(g_idx);
@@ -437,5 +441,5 @@ window.fps_history = [];
 window.last_render_time = performance.now();
 window.addEventListener('load', setup);
 window.addEventListener('resize', fillScreen);
-setInterval(() => location.reload(), 10_000); // Periodic reset 10 sec
+//setInterval(() => location.reload(), 10_000); // Periodic reset 10 sec
 setInterval(stepBalls, 1); // Step every 1ms
