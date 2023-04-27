@@ -91,7 +91,7 @@ function supplyDataBuffer(data, program, vsIn, mode) {
  * Draw one frame
  */
 function draw() {
-	gl.clearColor(...IlliniBlue); // F(...[1,2,3]) means f(1,2,3)
+	gl.clearColor(0,0,0,1); // F(...[1,2,3]) means f(1,2,3)
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.useProgram(program);
 	gl.bindVertexArray(geom.vao);
@@ -230,7 +230,7 @@ async function setupScene(scene, options) {
 		data = await fetch('test.json').then(r => r.json());
 		addNormals(data);
 	} else if (scene == 'terrain') {
-		genBalls(50 * 5);
+		genBalls(50);
 		data = await fetch('sphere80.json').then(r => r.json());
 		addNormals(data);
 	}
@@ -276,36 +276,18 @@ function genBalls(n) {
 		// Balls.size.push(viable_size[randInt(viable_size.length)]);
 		if (i < 4) {
 			balls.size.push(viable_size[2]);
-		} else if (i < 25) {
+		} else if(i<25) {
 			balls.size.push(viable_size[1]);
-		} else {
+		}else{
 			balls.size.push(viable_size[0]);
-		}
+        }
 
-		balls.mass.push(balls.size[i] ** 3);
+		balls.mass.push(balls.size[i]**3);
 
 		balls.color.push(randcolor());
 
 		balls.velocity.push([randbound(), randbound(), randbound()]);
 	}
-
-	// Grid for efficient collision
-	window.grid = [];
-	const cell_size = viable_size[2];
-	const cell_row_count = window.bounds.map(x => Math.ceil(x * 2 / cell_size) + 2);
-	for (let i = 0; i < cell_row_count; i++) {
-		grid.push([]);
-		for (let j = 0; j < cell_row_count; j++) {
-			grid[j].push([]);
-			for (let k = 0; k < cell_row_count; k++) {
-				grid[k].push(new Set());
-			}
-		}
-	}
-}
-
-function clear_grid() {
-	window.grid = grid.map(x => x.map(y => y.map(z => z.clear())));
 }
 
 function clip(x, u) {

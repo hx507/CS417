@@ -1,3 +1,2 @@
-Rotating camera (20 points)
-Fog (15 points)
-Vehicular movement (15 points)
+Extensions to burst.html:   Everything except Efficient collision detection
+fireworks.html: Core
