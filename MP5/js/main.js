@@ -230,7 +230,7 @@ async function setupScene(scene, options) {
 		data = await fetch('test.json').then(r => r.json());
 		addNormals(data);
 	} else if (scene == 'terrain') {
-		genBalls(50 * 5);
+		genBalls(50 * 20);
 		data = await fetch('sphere80.json').then(r => r.json());
 		addNormals(data);
 	}
@@ -291,17 +291,24 @@ function genBalls(n) {
 
 	// Grid for efficient collision
 	window.grid = [];
-	const cell_size = viable_size[2];
-	const cell_row_count = window.bounds.map(x => Math.ceil(x * 2 / cell_size) + 2);
-	for (let i = 0; i < cell_row_count; i++) {
+	window.cell_size = viable_size[2];
+	window.cell_row_count = window.bounds.map(x => Math.ceil(x * 2 / cell_size) + 2);
+	for (let i = 0; i < cell_row_count[0]; i++) {
 		grid.push([]);
-		for (let j = 0; j < cell_row_count; j++) {
-			grid[j].push([]);
-			for (let k = 0; k < cell_row_count; k++) {
-				grid[k].push(new Set());
+		for (let j = 0; j < cell_row_count[1]; j++) {
+			grid[i].push([]);
+			for (let k = 0; k < cell_row_count[2]; k++) {
+				grid[i][j].push(new Set());
 			}
 		}
 	}
+}
+
+// x -> i
+function g_idx(x){
+	let start = -bounds[0];
+	let diff = x-start;
+	return Math.ceil(diff/cell_size);
 }
 
 function clear_grid() {
@@ -343,6 +350,47 @@ function stepBalls() {
 		return vp;
 	};
 
+	// Efficient implimentation
+	
+	if(true){
+		// Linear scan
+		for (let i = 0; i < n; i++) {
+			const gi = balls.position[i].map(g_idx);
+			grid[gi[0]][gi[1]][gi[2]].add(i);
+		}
+		// Find balls in neibhoring cells
+		for (let i = 0; i < n; i++) {
+			const gi = balls.position[i].map(g_idx);
+			let nbh = new Set()
+			for (let a = -1; a < 2; a++) 
+			for (let b = -1; b < 2; b++) 
+			for (let c = -1; c < 2; c++){
+				let nbh_set = grid[gi[0]+a][gi[1]+b][gi[2]+c];
+				if(nbh_set){
+					for (const elem of nbh_set)
+						nbh.add(elem);
+				}
+			}
+			for (const j of nbh){
+				if(j==i)continue;
+				const x1 = balls.position[i];
+				const x2 = balls.position[j];
+				const v1 = balls.velocity[i];
+				const v2 = balls.velocity[j];
+				if (norm(v4subv4(x1, x2)) <= (balls.size[i] + balls.size[j]) * 1.3 && v4inner(v4subv4(v1, v2), v4subv4(x1, x2)) < 0) {
+					const v1p = collide(i, j);
+					const v2p = collide(j, i);
+					balls.velocity[i] = v1p;
+					balls.velocity[j] = v2p;
+				}
+			}
+		}
+
+
+	}
+
+	// Naive implimentation
+	if(false)
 	for (let i = 0; i < n; i++) {
 		for (let j = 0; j < n; j++) {
 			if (i == j) {
@@ -361,6 +409,7 @@ function stepBalls() {
 			}
 		}
 	}
+
 
 	// Wall collision with non-zero non-one elasticity
 	const elasticity = 0.9;

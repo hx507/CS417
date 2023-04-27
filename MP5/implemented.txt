@@ -1,2 +1,1 @@
-Extensions to burst.html:   Everything except Efficient collision detection
-fireworks.html: Core
+Extensions to burst.html:   Everything
